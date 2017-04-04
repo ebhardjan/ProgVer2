@@ -1,0 +1,11 @@
+# scala stuff:
+target
+*.class
+
+
+# intellij stuff:
+*.iml
+*.ipr
+*.iws
+.idea
+out
