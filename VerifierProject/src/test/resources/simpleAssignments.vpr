@@ -1,0 +1,7 @@
+method test()
+{
+  var x: Int
+  x := 0
+  x := x + 1
+  assert x == 1
+}
