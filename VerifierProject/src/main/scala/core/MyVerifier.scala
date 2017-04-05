@@ -71,7 +71,9 @@ class MyVerifier extends BareboneVerifier {
     * @return The verification result.
     */
   override def verify(program: sil.Program): VerificationResult = {
-    println("Input program:\n" + program) // right now, we just print the input program - but you should verify it!
+    if (config.printInput.getOrElse(false)) {
+      println("Input program:\n" + program)
+    }
 
     if(! util.supportedViperSyntax.isSupportedProgram(program)) {
       return ViperFailure(Seq(Internal(program,InternalReason(program, "Input program uses unsupported Viper features!"))))
