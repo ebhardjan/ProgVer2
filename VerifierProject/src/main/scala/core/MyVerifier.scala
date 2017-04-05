@@ -79,6 +79,11 @@ class MyVerifier extends BareboneVerifier {
       return ViperFailure(Seq(Internal(program,InternalReason(program, "Input program uses unsupported Viper features!"))))
     }
 
+    val dsaProgram = new DSATransformer().transformToDSA(program)
+    if (config.printDSA.getOrElse(false)){
+      println("DSA program:\n" + dsaProgram)
+    }
+
     val defaultOptions = Seq("-smt2") // you may want to pass more options to z3 here, or do it via the command-line argument z3Args
 
     // here is a reasonable initial configuration for z3. If you're interested, you can check out the options in the Z3 documentation (some are also visible from z3 /pd etc.)
