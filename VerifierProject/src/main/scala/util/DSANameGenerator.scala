@@ -33,7 +33,7 @@ class DSANameGenerator {
     if (lastCount >= 0) {
       makeIdentifier(name, lastCount)
     } else {
-      throw new Exception(s"Identifier ${name} has not been created yet.")
+      throw new Exception(s"Identifier $name has not been created yet.")
     }
   }
 }

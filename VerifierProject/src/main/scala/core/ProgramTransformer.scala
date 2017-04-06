@@ -7,7 +7,7 @@ import viper.silver.{ast => sil}
 /**
   * Created by Severin on 2017-04-05.
   */
-class DSATransformer {
+class ProgramTransformer {
   private val nameGenerator: DSANameGenerator = new DSANameGenerator()
 
   def renameLocalVarUnique(lv: sil.LocalVar): sil.LocalVar = {

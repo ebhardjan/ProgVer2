@@ -183,3 +183,10 @@ case class Constraining(vars: Seq[LocalVar], body: Stmt)(val pos: Position = NoP
   * scopes.
   */
 case class LocalVarDeclStmt(decl: LocalVarDecl)(val pos: Position = NoPosition, val info: Info = NoInfo) extends Stmt
+
+/** Non deterministic choice.
+  *
+  * [2017-04-06 Severin] Introduced as an intermediate step for the Project 2 verifier.
+  */
+case class NonDeterministicChoice(choiceA: Stmt, choiceB: Stmt)
+                                 (val pos: Position = NoPosition, val info: Info = NoInfo) extends Stmt

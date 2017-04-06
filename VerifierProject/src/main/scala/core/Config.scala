@@ -20,8 +20,8 @@ class Config(args: Seq[String], verifierName: String) extends SilFrontendConfig(
     default = Some(false)
   )
 
-  val printDSA = opt[Boolean]("printDSA",
-    descr = "Print the program transformed to DSA",
+  val printTP = opt[Boolean]("printTP",
+    descr = "Print the transformed program",
     default = Some(false)
   )
 

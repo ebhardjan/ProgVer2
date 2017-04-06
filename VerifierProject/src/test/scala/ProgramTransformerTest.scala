@@ -1,13 +1,13 @@
-import core.DSATransformer
+import core.ProgramTransformer
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import viper.silver.ast._
 
 /**
   * Created by Severin on 2017-04-05.
   */
-class DSATransformerTest extends FunSuite with BeforeAndAfter {
+class ProgramTransformerTest extends FunSuite with BeforeAndAfter {
 
-  var transformer: DSATransformer = _
+  var transformer: ProgramTransformer = _
   
   def createDummyProgram(domains: Seq[Domain] = Seq(), methods: Seq[Method] = Seq()): Program = {
     Program(domains, Seq(), Seq(), Seq(), methods)()
@@ -25,7 +25,7 @@ class DSATransformerTest extends FunSuite with BeforeAndAfter {
   }
 
   before {
-    transformer = new DSATransformer()
+    transformer = new ProgramTransformer()
   }
 
   test("simple assignment") {
