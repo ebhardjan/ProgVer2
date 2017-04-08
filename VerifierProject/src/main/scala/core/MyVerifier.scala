@@ -1,17 +1,18 @@
 package core
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
-import sys.process._
+
 import smtlib.parser.Commands._
 import smtlib.parser.CommandsResponses._
 import smtlib.theories.Core._
-import viper.silver.{ast => sil} // rename package, so that we can write viper.Assert etc. to select the Viper type, rather than the scala-smtlib one
+import util.{SmtLibUtils}
 import viper.silver.frontend.SilFrontend
-import viper.silver.verifier.{VerificationResult, Success => ViperSuccess, Failure => ViperFailure} // renaming imports to avoid name clashes (with the outcomes defined as subtypes of smtlib.parser.GenReponse)
 import viper.silver.verifier.errors._
 import viper.silver.verifier.reasons._
+import viper.silver.verifier.{VerificationResult, Failure => ViperFailure, Success => ViperSuccess}
+import viper.silver.{ast => sil}
 
-import scala.sys.process.{ProcessIO, ProcessLogger}
+import scala.sys.process.{ProcessIO, _}
 
 
 object Main extends SilFrontend{ // "Sil" is an (old) name for the Viper intermediate language
@@ -79,6 +80,11 @@ class MyVerifier extends BareboneVerifier {
       return ViperFailure(Seq(Internal(program,InternalReason(program, "Input program uses unsupported Viper features!"))))
     }
 
+    val declarations = DeclarationCollector.collectDeclarations(program.methods.head.locals)
+    val declarationsString = SmtLibUtils.declarationString(declarations)
+    val verificationConditions: Set[VerificationCondition] = WlpStar.wlpStar(program.methods.head.body, Set())
+    DeclarationCollector.collectDeclarations(program.methods.head.locals)
+
     val defaultOptions = Seq("-smt2") // you may want to pass more options to z3 here, or do it via the command-line argument z3Args
 
     // here is a reasonable initial configuration for z3. If you're interested, you can check out the options in the Z3 documentation (some are also visible from z3 /pd etc.)
@@ -106,7 +112,8 @@ class MyVerifier extends BareboneVerifier {
 
     // You can decide between writing your smt queries directly as Strings (as in the prelude above), or using the scala-smtlib library to build them up as an AST which you then print. Or indeed, you can mix both approaches, as below
     // You will want to change this query to represent the verification conditions for your input program
-    val toyQuery = Assert(BoolConst(false)) :: CheckSat() :: List()
+    val preconditions = True() // TODO is this where the axioms will be???
+    val toyQuery = Assert(Implies(preconditions, Not(verificationConditions.head.formula))) :: CheckSat() :: List()
     // when printed via "mkString" (to convert the list of Strings into one), this will give the String "(assert false)\n(check-sat)\n"
 
 
@@ -114,7 +121,7 @@ class MyVerifier extends BareboneVerifier {
     val tmp = File.createTempFile("mytempfile", ".smt2")
     tmp.deleteOnExit()
     val stream = new BufferedOutputStream(new FileOutputStream(tmp))
-    val inputString : String = smtPrelude + toyQuery.mkString
+    val inputString : String = smtPrelude + declarationsString + toyQuery.mkString
 
     if(config.printSMT.getOrElse(false)) { // print the smt output if the command-line option was specified
       println(inputString)
@@ -161,17 +168,17 @@ class MyVerifier extends BareboneVerifier {
     val z3Response: CheckSatResponse  = parser.parseCheckSatResponse
 
     // Build a corresponding Viper VerificationResult, depending on the response from Z3:
-    val viperResult : VerificationResult = z3Response match {
-    case CheckSatStatus(SatStatus) | CheckSatStatus(UnknownStatus) => // both unknown and sat should be treated as failed attempts to prove unsat
-      ViperFailure(Seq(AssertFailed(dummyAssert,FeatureUnsupported(dummyAssert, "Actual verification isn't implemented yet"))))
+    val viperResult: VerificationResult = z3Response match {
+      case CheckSatStatus(SatStatus) | CheckSatStatus(UnknownStatus) => // both unknown and sat should be treated as failed attempts to prove unsat
+        ViperFailure(Seq(AssertFailed(verificationConditions.head.assert, AssertionFalse(verificationConditions.head.exp))))
 
-    // usually unsat is the result that means the entailment your checking holds - this is the successful case
-    case CheckSatStatus(UnsatStatus) =>
-      ViperSuccess
+      // usually unsat is the result that means the entailment your checking holds - this is the successful case
+      case CheckSatStatus(UnsatStatus) =>
+        ViperSuccess
 
-    // some kind of unusual error (e.g. the smt solver didn't understand the input)
-    case res@_ =>
-      ViperFailure(Seq(Internal(program,InternalReason(program, "Unexpected response from Z3: " + res.toString))))
+      // some kind of unusual error (e.g. the smt solver didn't understand the input)
+      case res@_ =>
+        ViperFailure(Seq(Internal(program, InternalReason(program, "Unexpected response from Z3: " + res.toString))))
     }
 
     viperResult

@@ -1,0 +1,5 @@
+method test() {
+    var a: Int
+    assume a == 0
+    assert a == 1
+}
