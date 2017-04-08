@@ -81,32 +81,52 @@ class MyVerifier extends BareboneVerifier {
       // reduction to smt2 formula
       // TODO DSA conversion here...
       val method = m
+
       val declarations = DeclarationCollector.collectDeclarations(method.locals)
       val declarationsString = SmtLibUtils.declarationString(declarations)
       val verificationConditions: Set[VerificationCondition] = WlpStar.wlpStar(method.body, Set())
 
-      if (verificationConditions.nonEmpty) {
-        // solving the smt2 formula with z3
-        // TODO is this where the axioms will be???
-        val preconditions = True()
-        val query = Assert(Implies(preconditions, Not(verificationConditions.head.formula))) :: CheckSat() :: List()
-        val z3Response = validateWithZ3(declarationsString, query.mkString)
-        z3Response match {
-          case CheckSatStatus(SatStatus) | CheckSatStatus(UnknownStatus) =>
-            val newFailure = AssertFailed(verificationConditions.head.assert,
-              AssertionFalse(verificationConditions.head.exp))
-            failures = failures :+ newFailure
-          case CheckSatStatus(UnsatStatus) =>
-          // nothing here
-          case res@_ => Internal(program, InternalReason(program, "Unexpected response from Z3: " + res.toString))
-        }
-      }
+      failures = failures ++
+        verificationConditions.foldLeft[Seq[VerificationError]](Seq())((acc, validationCondition) => {
+          val failure: Option[VerificationError] = hasFailure(validationCondition, declarationsString, program)
+          if (failure.nonEmpty) {
+            acc :+ failure.get
+          } else {
+            acc
+          }
+        })
     })
 
     if (failures.nonEmpty) {
       ViperFailure(failures)
     } else {
       ViperSuccess
+    }
+  }
+
+  /**
+    * checks if a verification condition is violated -> we have an assertion that might fail
+    *
+    * @param verificationCondition condition that we want to check
+    * @param declarations the declarations-string of variables of the current method (in smt2 format)
+    * @param program the whole program, used in case of an internal error
+    * @return
+    */
+  private def hasFailure(verificationCondition: VerificationCondition,
+                          declarations: String,
+                          program: sil.Program): Option[VerificationError] = {
+    // solving the smt2 formula with z3
+    // TODO is this where the axioms will be???
+    val preconditions = True()
+    val query = Assert(Implies(preconditions, Not(verificationCondition.formula))) :: CheckSat() :: List()
+    val z3Response = validateWithZ3(declarations, query.mkString)
+    z3Response match {
+      case CheckSatStatus(SatStatus) | CheckSatStatus(UnknownStatus) =>
+        Some(AssertFailed(verificationCondition.assert, AssertionFalse(verificationCondition.exp)))
+      case CheckSatStatus(UnsatStatus) =>
+        None
+      case res@_ =>
+        Some(Internal(program, InternalReason(program, "Unexpected response from Z3: " + res.toString)))
     }
   }
 

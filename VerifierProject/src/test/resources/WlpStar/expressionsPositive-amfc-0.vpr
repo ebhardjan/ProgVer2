@@ -1,4 +1,4 @@
-// tests weather we handle arithmetic expressions correctly
+// tests weather we handle expressions correctly (positive case)
 // expected assertion-might-fail-count: 0
 method additionAndSubtraction() {
     var a: Int
@@ -71,6 +71,7 @@ method booleanExpressions() {
     assert (a || b) == true
     assert (b ==> a) == true
     assert (a ==> b) == false
+    assert !(a && b) == true
 }
 
 method expressionWithBooleanVar() {

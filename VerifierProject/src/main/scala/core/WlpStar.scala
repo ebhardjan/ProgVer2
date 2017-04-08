@@ -77,6 +77,8 @@ object WlpStar {
         Core.And(toTerm(left), toTerm(right))
       case ast.Implies(left, right) =>
         Core.Implies(toTerm(left), toTerm(right))
+      case ast.Not(e) =>
+        Core.Not(toTerm(e))
 
       case TrueLit() =>
         True()
