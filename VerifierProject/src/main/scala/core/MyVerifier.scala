@@ -85,19 +85,21 @@ class MyVerifier extends BareboneVerifier {
       val declarationsString = SmtLibUtils.declarationString(declarations)
       val verificationConditions: Set[VerificationCondition] = WlpStar.wlpStar(method.body, Set())
 
-      // solving the smt2 formula with z3
-      // TODO is this where the axioms will be???
-      val preconditions = True()
-      val query = Assert(Implies(preconditions, Not(verificationConditions.head.formula))) :: CheckSat() :: List()
-      val z3Response = validateWithZ3(declarationsString, query.mkString)
-      z3Response match {
-        case CheckSatStatus(SatStatus) | CheckSatStatus(UnknownStatus) =>
-          val newFailure = AssertFailed(verificationConditions.head.assert,
-            AssertionFalse(verificationConditions.head.exp))
-          failures = failures :+ newFailure
-        case CheckSatStatus(UnsatStatus) =>
+      if (verificationConditions.nonEmpty) {
+        // solving the smt2 formula with z3
+        // TODO is this where the axioms will be???
+        val preconditions = True()
+        val query = Assert(Implies(preconditions, Not(verificationConditions.head.formula))) :: CheckSat() :: List()
+        val z3Response = validateWithZ3(declarationsString, query.mkString)
+        z3Response match {
+          case CheckSatStatus(SatStatus) | CheckSatStatus(UnknownStatus) =>
+            val newFailure = AssertFailed(verificationConditions.head.assert,
+              AssertionFalse(verificationConditions.head.exp))
+            failures = failures :+ newFailure
+          case CheckSatStatus(UnsatStatus) =>
           // nothing here
-        case res@_ => Internal(program, InternalReason(program, "Unexpected response from Z3: " + res.toString))
+          case res@_ => Internal(program, InternalReason(program, "Unexpected response from Z3: " + res.toString))
+        }
       }
     })
 

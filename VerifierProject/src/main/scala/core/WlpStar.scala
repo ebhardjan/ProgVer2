@@ -1,10 +1,11 @@
 package core
 
 import smtlib.parser.Terms._
-import smtlib.theories.Core
-import smtlib.theories.Core.Equals
-import smtlib.theories.Ints.NumeralLit
+import smtlib.theories.Core._
+import smtlib.theories.{Core, Ints}
+import smtlib.theories.Ints._
 import viper.silver.ast._
+import viper.silver.ast
 
 /**
   * Created by jan on 07.04.17.
@@ -30,11 +31,62 @@ object WlpStar {
     }
   }
 
+  /**
+    * converts a given silver expression into a smt-lib term
+    *
+    * note: the method is "formatted" in this ugly way (new lines after the case statements) so that we can collect
+    * collect line coverage information while running the tests and make sure that our test cover all possible
+    * expressions.
+    *
+    * @param exp a silver expression
+    * @return a smt-lib term
+    */
   private def toTerm(exp: Exp): Term = {
     exp match {
-      case EqCmp(left, right) => Equals(toTerm(left), toTerm(right))
-      case LocalVar(name) => QualifiedIdentifier(SimpleIdentifier(SSymbol(name)))
-      case IntLit(i) => NumeralLit(i)
+      case ast.Add(left, right) =>
+        Ints.Add(toTerm(left), toTerm(right))
+      case ast.Sub(left, right) =>
+        Ints.Sub(toTerm(left), toTerm(right))
+      case ast.Mul(left, right) =>
+        Ints.Mul(toTerm(left), toTerm(right))
+      case ast.Div(left, right) =>
+        Ints.Div(toTerm(left), toTerm(right))
+      case ast.Mod(left, right) =>
+        Ints.Mod(toTerm(left), toTerm(right))
+
+      case Minus(e) =>
+        Neg(toTerm(e))
+
+      case LtCmp(left, right) =>
+        Ints.LessThan(toTerm(left), toTerm(right))
+      case LeCmp(left, right) =>
+        Ints.LessEquals(toTerm(left), toTerm(right))
+      case GtCmp(left, right) =>
+        Ints.GreaterThan(toTerm(left), toTerm(right))
+      case GeCmp(left, right) =>
+        Ints.GreaterEquals(toTerm(left), toTerm(right))
+
+      case EqCmp(left, right) =>
+        Equals(toTerm(left), toTerm(right))
+      case NeCmp(left, right) =>
+        Core.Not(Equals(toTerm(left), toTerm(right)))
+
+      case ast.Or(left, right) =>
+        Core.Or(toTerm(left), toTerm(right))
+      case ast.And(left, right) =>
+        Core.And(toTerm(left), toTerm(right))
+      case ast.Implies(left, right) =>
+        Core.Implies(toTerm(left), toTerm(right))
+
+      case TrueLit() =>
+        True()
+      case FalseLit() =>
+        False()
+
+      case LocalVar(name) =>
+        QualifiedIdentifier(SimpleIdentifier(SSymbol(name)))
+      case IntLit(i) =>
+        NumeralLit(i)
     }
   }
 
