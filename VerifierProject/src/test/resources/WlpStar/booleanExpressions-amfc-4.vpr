@@ -1,0 +1,14 @@
+// tests weather we handle boolean expressions correctly (negative case)
+// expected assertion-might-fail-count: 4
+method booleanExpressions() {
+    var a: Bool
+    var b: Bool
+
+    assume a == true
+    assume b == false
+
+    assert (a && b) == true
+    assert (a || b) == false
+    assert (b ==> a) == false
+    assert (a ==> b) == true
+}

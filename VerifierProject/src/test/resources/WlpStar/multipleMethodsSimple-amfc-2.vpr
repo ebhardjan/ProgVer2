@@ -1,0 +1,20 @@
+// tests whether we handle multiple asserts in multiple methods correctly
+// expected assertion might-fail-count: 2
+
+method test1() {
+    var a: Int
+    assume a == 0
+    assert a == 1
+}
+
+method test2() {
+    var b: Int
+    assume b == 0
+    assert b == 0
+}
+
+method test3() {
+    var c: Int
+    assume c == 0
+    assert c == 1
+}

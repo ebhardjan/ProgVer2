@@ -1,17 +1,18 @@
 package core
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
-import sys.process._
+
 import smtlib.parser.Commands._
 import smtlib.parser.CommandsResponses._
 import smtlib.theories.Core._
-import viper.silver.{ast => sil} // rename package, so that we can write viper.Assert etc. to select the Viper type, rather than the scala-smtlib one
+import util.SmtLibUtils
 import viper.silver.frontend.SilFrontend
-import viper.silver.verifier.{VerificationResult, Success => ViperSuccess, Failure => ViperFailure} // renaming imports to avoid name clashes (with the outcomes defined as subtypes of smtlib.parser.GenReponse)
 import viper.silver.verifier.errors._
 import viper.silver.verifier.reasons._
+import viper.silver.verifier.{VerificationError, VerificationResult, Failure => ViperFailure, Success => ViperSuccess}
+import viper.silver.{ast => sil}
 
-import scala.sys.process.{ProcessIO, ProcessLogger}
+import scala.sys.process.{ProcessIO, _}
 
 
 object Main extends SilFrontend{ // "Sil" is an (old) name for the Viper intermediate language
@@ -50,10 +51,6 @@ object Main extends SilFrontend{ // "Sil" is an (old) name for the Viper interme
   }
 }
 
-
-
-// This is where you will do most of your work:
-
 class MyVerifier extends BareboneVerifier {
   override def name: String = "MyVerifierName"
 
@@ -79,8 +76,69 @@ class MyVerifier extends BareboneVerifier {
       return ViperFailure(Seq(Internal(program,InternalReason(program, "Input program uses unsupported Viper features!"))))
     }
 
-    val defaultOptions = Seq("-smt2") // you may want to pass more options to z3 here, or do it via the command-line argument z3Args
+    var failures: Seq[VerificationError] = Seq()
+    program.methods.foreach(m => {
+      // reduction to smt2 formula
+      // TODO DSA conversion here...
+      val method = m
 
+      val declarations = DeclarationCollector.collectDeclarations(method.locals)
+      val declarationsString = SmtLibUtils.declarationString(declarations)
+      val verificationConditions: Set[VerificationCondition] = WlpStar.wlpStar(method.body, Set())
+
+      failures = failures ++
+        verificationConditions.foldLeft[Seq[VerificationError]](Seq())((acc, validationCondition) => {
+          val failure: Option[VerificationError] = hasFailure(validationCondition, declarationsString, program)
+          if (failure.nonEmpty) {
+            acc :+ failure.get
+          } else {
+            acc
+          }
+        })
+    })
+
+    if (failures.nonEmpty) {
+      ViperFailure(failures)
+    } else {
+      ViperSuccess
+    }
+  }
+
+  /**
+    * checks if a verification condition is violated -> we have an assertion that might fail
+    *
+    * @param verificationCondition condition that we want to check
+    * @param declarations the declarations-string of variables of the current method (in smt2 format)
+    * @param program the whole program, used in case of an internal error
+    * @return
+    */
+  private def hasFailure(verificationCondition: VerificationCondition,
+                          declarations: String,
+                          program: sil.Program): Option[VerificationError] = {
+    // solving the smt2 formula with z3
+    // TODO is this where the axioms will be???
+    val preconditions = True()
+    val query = Assert(Implies(preconditions, Not(verificationCondition.formula))) :: CheckSat() :: List()
+    val z3Response = validateWithZ3(declarations, query.mkString)
+    z3Response match {
+      case CheckSatStatus(SatStatus) | CheckSatStatus(UnknownStatus) =>
+        Some(AssertFailed(verificationCondition.assert, AssertionFalse(verificationCondition.exp)))
+      case CheckSatStatus(UnsatStatus) =>
+        None
+      case res@_ =>
+        Some(Internal(program, InternalReason(program, "Unexpected response from Z3: " + res.toString)))
+    }
+  }
+
+  /**
+    * adds the smt prelude and the given declarations to the query and solves it with z3
+    *
+    * @param declarations String containing all the variable/function declarations
+    * @param query        query that z3 should solve
+    * @return
+    */
+  private def validateWithZ3(declarations: String, query: String) = {
+    // FIXME: ugly large method, nearly as ugly as the original verify method...
     // here is a reasonable initial configuration for z3. If you're interested, you can check out the options in the Z3 documentation (some are also visible from z3 /pd etc.)
     val smtPrelude =
       """
@@ -104,24 +162,17 @@ class MyVerifier extends BareboneVerifier {
         |
         |""".stripMargin
 
-    // You can decide between writing your smt queries directly as Strings (as in the prelude above), or using the scala-smtlib library to build them up as an AST which you then print. Or indeed, you can mix both approaches, as below
-    // You will want to change this query to represent the verification conditions for your input program
-    val toyQuery = Assert(BoolConst(false)) :: CheckSat() :: List()
-    // when printed via "mkString" (to convert the list of Strings into one), this will give the String "(assert false)\n(check-sat)\n"
-
-
     // write program to a temporary file (name will be an auto-generated variant of the first parameter string)
     val tmp = File.createTempFile("mytempfile", ".smt2")
     tmp.deleteOnExit()
     val stream = new BufferedOutputStream(new FileOutputStream(tmp))
-    val inputString : String = smtPrelude + toyQuery.mkString
+    val inputString : String = smtPrelude + declarations + query
 
     if(config.printSMT.getOrElse(false)) { // print the smt output if the command-line option was specified
       println(inputString)
     }
     stream.write(inputString.getBytes)
     stream.close()
-
 
     val z3Path : String = config.z3executable.toOption.get // this option is always set (possibly to the default of "z3"), so "get" is safe
 
@@ -132,7 +183,6 @@ class MyVerifier extends BareboneVerifier {
       case Some(args) =>
         args.split(' ').map(_.trim)
     }
-
 
     // store the outputs which come from stdout, stderr
     var result: String = ""
@@ -146,6 +196,8 @@ class MyVerifier extends BareboneVerifier {
       in.close()
     }
 
+    val defaultOptions = Seq("-smt2") // you may want to pass more options to z3 here, or do it via the command-line argument z3Args
+
     // run Z3, passing the tmp file as input:
     (Seq(z3Path) ++ defaultOptions ++ userProvidedZ3Args ++ Seq(tmp.getAbsolutePath)).run(new ProcessIO(_.close(), out, err)).exitValue() // .exitValue() causes us to block until the process terminates
 
@@ -154,33 +206,14 @@ class MyVerifier extends BareboneVerifier {
     val lexer = new smtlib.lexer.Lexer(new java.io.StringReader(result))
     val parser = new smtlib.parser.Parser(lexer)
 
-    // this is a dummy Viper Assert statement, just for inserting in the error messages below; for real errors, you should insert elements of the program to be verified.
-    val dummyAssert : sil.Assert = sil.Assert(sil.TrueLit()())() // Viper (sil) nodes typically take a second argument set, allowing the specification of positional and other auxiliary information. These arguments can be left blank (in which case defaults are inserted), but the parentheses are still necessary.
-
     // we use a scala-smtlib function to parse the response
-    val z3Response: CheckSatResponse  = parser.parseCheckSatResponse
-
-    // Build a corresponding Viper VerificationResult, depending on the response from Z3:
-    val viperResult : VerificationResult = z3Response match {
-    case CheckSatStatus(SatStatus) | CheckSatStatus(UnknownStatus) => // both unknown and sat should be treated as failed attempts to prove unsat
-      ViperFailure(Seq(AssertFailed(dummyAssert,FeatureUnsupported(dummyAssert, "Actual verification isn't implemented yet"))))
-
-    // usually unsat is the result that means the entailment your checking holds - this is the successful case
-    case CheckSatStatus(UnsatStatus) =>
-      ViperSuccess
-
-    // some kind of unusual error (e.g. the smt solver didn't understand the input)
-    case res@_ =>
-      ViperFailure(Seq(Internal(program,InternalReason(program, "Unexpected response from Z3: " + res.toString))))
-    }
-
-    viperResult
+    parser.parseCheckSatResponse
   }
-
 
   // utility method for reading the input stream into a String
   def convertStreamToString(is: java.io.InputStream) : String = {
     val s = new java.util.Scanner(is).useDelimiter("\\A")
     if (s.hasNext) s.next() else ""
   }
+
 }
