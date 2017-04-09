@@ -20,11 +20,6 @@ class Config(args: Seq[String], verifierName: String) extends SilFrontendConfig(
     default = Some(false)
   )
 
-  val printTP = opt[Boolean]("printTP",
-    descr = "Print the transformed program",
-    default = Some(false)
-  )
-
   val z3executable = opt[String]("z3Exe",
     descr = "Manually-specified full path to Z3.exe executable (default: z3)",
     default = Some("z3"),

@@ -1,17 +1,14 @@
-import core.ProgramTransformer
+package core
+
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import viper.silver.ast._
 
 /**
   * Created by Severin on 2017-04-05.
   */
-class ProgramTransformerTest extends FunSuite with BeforeAndAfter {
+class MethodTransformerTest extends FunSuite with BeforeAndAfter {
 
-  var transformer: ProgramTransformer = _
-  
-  def createDummyProgram(domains: Seq[Domain] = Seq(), methods: Seq[Method] = Seq()): Program = {
-    Program(domains, Seq(), Seq(), Seq(), methods)()
-  }
+  var transformer: MethodTransformer = _
   
   def createDummyMethod(name: String, 
                         _body: Stmt,
@@ -25,36 +22,36 @@ class ProgramTransformerTest extends FunSuite with BeforeAndAfter {
   }
 
   before {
-    transformer = new ProgramTransformer()
+    transformer = new MethodTransformer()
   }
 
   test("simple assignment") {
-    val initProg: Program = createDummyProgram(Seq(), Seq(createDummyMethod("foo", Seqn(Seq(
+    val initMeth: Method = createDummyMethod("foo", Seqn(Seq(
       LocalVarAssign(LocalVar("x")(Int), IntLit(0)())(),
       LocalVarAssign(LocalVar("x")(Int), IntLit(1)())()
-    ))())))
-    val targetProg: Program = createDummyProgram(Seq(), Seq(createDummyMethod("foo", Seqn(Seq(
+    ))())
+    val targetMeth: Method = createDummyMethod("foo", Seqn(Seq(
       LocalVarAssign(LocalVar("x_0")(Int), IntLit(0)())(),
       LocalVarAssign(LocalVar("x_1")(Int), IntLit(1)())()
-    ))())))
+    ))())
 
-    val dsaProg: Program = transformer.transformToDSA(initProg)
+    val transformedMeth: Method = transformer.transform(initMeth)
 
-    assert(dsaProg == targetProg, "should have converted program correctly")
+    assert(transformedMeth == targetMeth, "should have converted Method correctly")
   }
 
   test("assignment, var on rhs") {
-    val initProg = createDummyProgram(Seq(), Seq(createDummyMethod("foo", Seqn(Seq(
+    val initMeth = createDummyMethod("foo", Seqn(Seq(
       LocalVarAssign(LocalVar("x")(Int), IntLit(0)())(),
       LocalVarAssign(LocalVar("x")(Int), Add(LocalVar("x")(Int),IntLit(1)())())()
-    ))())))
-    val targetProg = createDummyProgram(Seq(), Seq(createDummyMethod("foo", Seqn(Seq(
+    ))())
+    val targetMeth = createDummyMethod("foo", Seqn(Seq(
       LocalVarAssign(LocalVar("x_0")(Int), IntLit(0)())(),
       LocalVarAssign(LocalVar("x_1")(Int), Add(LocalVar("x_0")(Int),IntLit(1)())())()
-    ))())))
+    ))())
 
-    val dsaProg = transformer.transformToDSA(initProg)
+    val transformedMeth = transformer.transform(initMeth)
 
-    assert(dsaProg == targetProg, "should have converted program correctly")
+    assert(transformedMeth == targetMeth, "should have converted Method correctly")
   }
 }

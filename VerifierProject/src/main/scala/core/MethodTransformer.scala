@@ -7,7 +7,7 @@ import viper.silver.{ast => sil}
 /**
   * Created by Severin on 2017-04-05.
   */
-class ProgramTransformer {
+class MethodTransformer {
   private val nameGenerator: DSANameGenerator = new DSANameGenerator()
 
   def renameLocalVarUnique(lv: sil.LocalVar): sil.LocalVar = {
@@ -25,7 +25,7 @@ class ProgramTransformer {
     exp.transform(pre)()
   }
 
-  def transformToDSA(program: sil.Program): sil.Program = {
+  def transform(method: sil.Method): sil.Method = {
     val pre: PartialFunction[sil.Node, sil.Node] = {
       case n: sil.LocalVarAssign => {
         val newRhs: sil.Exp = replaceLocalVarWithLast(n.rhs)
@@ -36,7 +36,7 @@ class ProgramTransformer {
     val post: PartialFunction[sil.Node, sil.Node] = {
       case n => n;
     }
-    program.transform(pre)(n => !pre.isDefinedAt(n), post)
+    method.transform(pre)(n => !pre.isDefinedAt(n), post)
   }
 
 }

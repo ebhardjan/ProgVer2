@@ -76,17 +76,11 @@ class MyVerifier extends BareboneVerifier {
       return ViperFailure(Seq(Internal(program,InternalReason(program, "Input program uses unsupported Viper features!"))))
     }
 
-    val transformedProgram = new ProgramTransformer().transformToDSA(program)
-    if (config.printTP.getOrElse(false)){
-      println("DSA program:\n" + transformedProgram)
-    }
-
-    val defaultOptions = Seq("-smt2") // you may want to pass more options to z3 here, or do it via the command-line argument z3Args
+    val transformer = new MethodTransformer()
     var failures: Seq[VerificationError] = Seq()
     program.methods.foreach(m => {
       // reduction to smt2 formula
-      // TODO DSA conversion here...
-      val method = m
+      val method = transformer.transform(m)
 
       val declarations = DeclarationCollector.collectDeclarations(method.locals)
       val declarationsString = SmtLibUtils.declarationString(declarations)
