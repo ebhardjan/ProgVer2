@@ -17,5 +17,5 @@ lazy val silver = RootProject(file("../silver"))
 
 lazy val scalaSmtlib = RootProject(file("../scala-smtlib"))
 
-val main = Project(id = "VerifierProject", base = file(".")).dependsOn(silver,scalaSmtlib) 
+val main = Project(id = "VerifierProject", base = file(".")).dependsOn(silver,scalaSmtlib)
 

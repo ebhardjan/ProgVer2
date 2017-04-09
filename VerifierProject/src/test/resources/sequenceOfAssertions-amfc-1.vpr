@@ -1,0 +1,13 @@
+// tests if assertions kill traces that make the assertion false
+// expected assertion-might-fail-count: 1
+method test() {
+    var a: Int
+
+    // this assertion is violated
+    assert a < 2
+
+    // only traces where a is smaller than 2 should survive up to here
+
+    // this assertion should hold
+    assert a < 3
+}
