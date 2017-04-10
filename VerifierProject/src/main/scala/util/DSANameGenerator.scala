@@ -12,6 +12,14 @@ class DSANameGenerator {
   val separator = "_"
   private val identCounts: mutable.HashMap[String, Int] = mutable.HashMap[String, Int]()
 
+  def getVersion(name: String): Int = {
+    identCounts.getOrElse(name, -1)
+  }
+
+  def setVersion(name: String, version: Int): Unit = {
+    identCounts.put(name, version)
+  }
+
   def makeIdentifier(name: String, count: Int): String = {
     name + separator + count
   }
@@ -36,4 +44,14 @@ class DSANameGenerator {
       throw new Exception(s"Identifier $name has not been created yet.")
     }
   }
+
+  def increaseVersion(name:String): Unit = {
+    val lastCount: Int = identCounts.getOrElse(name, -1)
+    if (lastCount >= 0) {
+      identCounts.put(name, lastCount + 1)
+    } else {
+      throw new Exception(s"Identifier $name has not been created yet.")
+    }
+  }
+
 }

@@ -90,7 +90,10 @@ class MethodTransformerTest extends FunSuite with BeforeAndAfter {
 
   test("while loop simple") {
     val xGt0: Exp = GtCmp(LocalVar("x")(Int), IntLit(0)())()
+    val dsaXGt0: Exp = GtCmp(LocalVar("x_1")(Int), IntLit(0)())()
     val inv: Seq[Exp] = Seq(GeCmp(LocalVar("x")(Int), IntLit(0)())())
+    val dsaInv: Seq[Exp] = Seq(GeCmp(LocalVar("x_0")(Int), IntLit(0)())())
+    val tInv: Seq[Exp] = Seq(GeCmp(LocalVar("x_1")(Int), IntLit(0)())())
     val initMeth = createDummyMethod("foo", Seqn(Seq(
       LocalVarAssign(LocalVar("x")(Int), IntLit(5)())(),
       While(xGt0,
@@ -103,13 +106,15 @@ class MethodTransformerTest extends FunSuite with BeforeAndAfter {
 
     val targetMeth = createDummyMethod("foo", Seqn(Seq(
       Inhale(EqCmp(LocalVar("x_0")(Int), IntLit(5)())())(),
+      Assert(dsaInv.head)(),
       NonDeterministicChoice(
         Seqn(Seq(
-          Inhale(And(inv.head, xGt0)())(),
-          Assert(inv.head)(),
+          Inhale(And(tInv.head, dsaXGt0)())(),
+          Assert(tInv.head)(),
+          Inhale(EqCmp(LocalVar("x_2")(Int), Sub(LocalVar("x_1")(Int), IntLit(1)())())())(),
           Inhale(BoolLit(false)())()
         ))(),
-        Inhale(And(inv.head, Not(xGt0)())())()
+        Inhale(And(tInv.head, Not(dsaXGt0)())())()
       )(),
       Assert(EqCmp(LocalVar("x_1")(Int), IntLit(0)())())()
     ))())

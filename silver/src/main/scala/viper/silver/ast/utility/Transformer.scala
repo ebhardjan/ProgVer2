@@ -283,6 +283,9 @@ object Transformer {
 
             case LocalVarDeclStmt(decl) =>
               LocalVarDeclStmt(go(decl))(statement.pos, statement.info)
+
+            case NonDeterministicChoice(choiceA, choiceB) =>
+              NonDeterministicChoice(go(choiceA), go(choiceB))(statement.pos, statement.info)
           }
 
         case trigger @ Trigger(expressions) =>

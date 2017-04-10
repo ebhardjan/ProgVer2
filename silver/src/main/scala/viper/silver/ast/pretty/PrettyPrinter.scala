@@ -670,6 +670,8 @@ object FastPrettyPrinter extends FastPrettyPrinterBase with BracketPrettyPrinter
       case LocalVarDeclStmt(decl) =>
         text("var") <+> showVar(decl)
       case null => uninitialized
+      case NonDeterministicChoice(choiceA, choiceB) =>
+        text("(") <+> showBlock(choiceA) <+> text(") [] (") <+> showBlock(choiceB) <+> text(")")
     }
     showComment(stmt) <> stmtDoc
   }
