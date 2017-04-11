@@ -80,7 +80,8 @@ class MethodTransformerTest extends FunSuite with BeforeAndAfter {
           Inhale(EqCmp(LocalVar("x_1")(Int), IntLit(2)())())()
         ))()
       )(),
-      Assert(EqCmp(LocalVar("x_1")(Int), IntLit(1)())())()
+      Assert(EqCmp(LocalVar("x_1")(Int), IntLit(1)())())(),
+      Inhale(EqCmp(LocalVar("x_1")(Int), IntLit(1)())())()
     ))())
 
     val transformedMeth = transformer.transform(initMeth)
@@ -107,16 +108,19 @@ class MethodTransformerTest extends FunSuite with BeforeAndAfter {
     val targetMeth = createDummyMethod("foo", Seqn(Seq(
       Inhale(EqCmp(LocalVar("x_0")(Int), IntLit(5)())())(),
       Assert(dsaInv.head)(),
+      Inhale(dsaInv.head)(),
       NonDeterministicChoice(
         Seqn(Seq(
           Inhale(And(tInv.head, dsaXGt0)())(),
-          Assert(tInv.head)(),
           Inhale(EqCmp(LocalVar("x_2")(Int), Sub(LocalVar("x_1")(Int), IntLit(1)())())())(),
+          Assert(tInv.head)(),
+          Inhale(tInv.head)(),
           Inhale(BoolLit(false)())()
         ))(),
         Inhale(And(tInv.head, Not(dsaXGt0)())())()
       )(),
-      Assert(EqCmp(LocalVar("x_1")(Int), IntLit(0)())())()
+      Assert(EqCmp(LocalVar("x_1")(Int), IntLit(0)())())(),
+      Inhale(EqCmp(LocalVar("x_1")(Int), IntLit(0)())())()
     ))())
 
     val transformedMeth = transformer.transform(initMeth)
