@@ -86,6 +86,8 @@ class DSANameGenerator {
     }
   }
 
+  /** Increase the version number of all given variables.
+    */
   def increaseVersion(nameSet: Set[String]): Unit = {
     for (name <- nameSet) increaseVersion(name)
   }

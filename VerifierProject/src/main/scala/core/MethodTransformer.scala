@@ -78,7 +78,6 @@ class MethodTransformer {
   private def renameLocalVarLast(lv: sil.LocalVar): sil.LocalVar = {
     sil.LocalVar(nameGenerator.getLastIdentifier(lv.name))(lv.typ)
   }
-
   /** Replace every local variable in the Exp with a new one, renamed to use the last written version of DSA
     */
   private def replaceLocalVarWithLast(exp: sil.Exp): sil.Exp = {
@@ -88,9 +87,11 @@ class MethodTransformer {
     exp.transform(pre)()
   }
 
+  /** Add all variable names in the input Seq to the name Generator.
+    */
   private def addDeclaredVarsToNameGenerator(varDecls: Seq[sil.LocalVarDecl]) = {
     for (varDecl <- varDecls) {
-      nameGenerator.createUniqueIdentifier(varDecl.name)
+      if (nameGenerator.getVersion(varDecl.name) != -1) nameGenerator.createUniqueIdentifier(varDecl.name)
     }
   }
 
@@ -189,7 +190,6 @@ class MethodTransformer {
     * @return The transformed method.
     */
   def transform(method: sil.Method): sil.Method = {
-//    var intermediate: sil.Method = transformWhileLoops(method)
     nameGenerator = new DSANameGenerator()
     addDeclaredVarsToNameGenerator(method.formalArgs)
     addDeclaredVarsToNameGenerator(method.locals)
