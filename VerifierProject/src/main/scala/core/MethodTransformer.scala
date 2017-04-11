@@ -18,9 +18,7 @@ class MethodTransformer {
     exps.size match {
       case 0 => sil.BoolLit(true)()
       case 1 => exps.head
-      case _ => exps match {
-        case fst :: rest => rest.foldLeft[sil.Exp](fst)((old, next) => sil.And(old, next)())
-      }
+      case _ => exps.reduce[sil.Exp]((acc, next) => sil.And(acc, next)())
     }
   }
 
@@ -113,7 +111,7 @@ class MethodTransformer {
     * @return A list of all newly created variables.
     */
   private def collectNewLocalVars(originals: Seq[sil.LocalVarDecl]): Seq[sil.LocalVarDecl] = {
-    val varVerMap = nameGenerator.variableMapSnapshot()
+    val varVerMap: Map[String, Int] = nameGenerator.variableMapSnapshot(useMaxCounts =  true)
     (for (sil.LocalVarDecl(varName, typ) <- originals if varVerMap.isDefinedAt(varName)) yield {
       for (i <- 0 to varVerMap.getOrElse(varName, 0)) yield
         sil.LocalVarDecl(nameGenerator.makeIdentifier(varName, i), typ)()
