@@ -134,9 +134,18 @@ class MethodTransformer {
     node.transform(pre)()
   }
 
+  def collectNewLocalVars(originals: Seq[sil.LocalVarDecl]): Seq[sil.LocalVarDecl] = {
+    val varVerMap = nameGenerator.variableMapSnapshot()
+    (for (sil.LocalVarDecl(varName, typ) <- originals if varVerMap.isDefinedAt(varName)) yield {
+      for (i <- 0 to varVerMap.getOrElse(varName, 0)) yield
+        sil.LocalVarDecl(nameGenerator.makeIdentifier(varName, i), typ)()
+    }).flatten
+  }
+
   def transform(method: sil.Method): sil.Method = {
     val noWhile: sil.Method = transformWhileLoops(method)
     val dsa: sil.Method = transformToDSA(noWhile)
+    dsa.locals ++= collectNewLocalVars(dsa.locals)
     transformIfStmts(dsa)
   }
 

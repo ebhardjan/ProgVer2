@@ -20,6 +20,10 @@ class DSANameGenerator {
     identCounts.put(name, version)
   }
 
+  def variableMapSnapshot(): Map[String, Int] = {
+    identCounts.toMap
+  }
+
   def makeIdentifier(name: String, count: Int): String = {
     name + separator + count
   }
