@@ -12,27 +12,6 @@ import scala.collection.mutable
 class MethodTransformer {
   private val nameGenerator: DSANameGenerator = new DSANameGenerator()
 
-  /** Create a new LocalVar node with a new unique identifier
-    */
-  private def renameLocalVarUnique(lv: sil.LocalVar): sil.LocalVar = {
-    sil.LocalVar(nameGenerator.createUniqueIdentifier(lv.name))(lv.typ)
-  }
-
-  /** Create a new LocalVar node renamed to use the last written version of DSA
-    */
-  private def renameLocalVarLast(lv: sil.LocalVar): sil.LocalVar = {
-    sil.LocalVar(nameGenerator.getLastIdentifier(lv.name))(lv.typ)
-  }
-
-  /** Replace every local variable in the Exp with a new one, renamed to use the last written version of DSA
-    */
-  private def replaceLocalVarWithLast(exp: sil.Exp): sil.Exp = {
-    val pre: PartialFunction[sil.Node, sil.Node] = {
-      case n: LocalVar => renameLocalVarLast(n)
-    }
-    exp.transform(pre)()
-  }
-
   /** Take a sequence of Exps and return an AST representing the conjunction of all the Exps
     */
   def unflattenAnd(exps: Seq[sil.Exp]): sil.Exp = {
@@ -43,31 +22,6 @@ class MethodTransformer {
         case fst :: rest => rest.foldLeft[sil.Exp](fst)((old, next) => sil.And(old, next)())
       }
     }
-  }
-
-  /** Collect all the local variables which are assigned to within the Stmt.
-    * Returns a mapping from variable name to the number of times it has been assigned in the Stmt.
-    */
-  private def collectLocalVarsAssigned(stmt: sil.Stmt): mutable.Map[String, Int] = {
-    val varOccMap = mutable.Map[String, Int]()
-    stmt.visit({
-      case sil.LocalVarAssign(LocalVar(name), _) =>
-        val old = varOccMap.getOrElse(name, 0)
-        varOccMap.put(name, old + 1)
-    })
-    varOccMap
-  }
-
-  /** Collect all the local variables which have been versioned in the DSA process.
-    * @param originals The local vars as they were in the original program.
-    * @return A list of all newly created variables.
-    */
-  private def collectNewLocalVars(originals: Seq[sil.LocalVarDecl]): Seq[sil.LocalVarDecl] = {
-    val varVerMap = nameGenerator.variableMapSnapshot()
-    (for (sil.LocalVarDecl(varName, typ) <- originals if varVerMap.isDefinedAt(varName)) yield {
-      for (i <- 0 to varVerMap.getOrElse(varName, 0)) yield
-        sil.LocalVarDecl(nameGenerator.makeIdentifier(varName, i), typ)()
-    }).flatten
   }
 
   /** Do the transformation of while loops into a [[sil.NonDeterministicChoice]].
@@ -114,6 +68,27 @@ class MethodTransformer {
     method.transform()(_ => true, post)
   }
 
+  /** Create a new LocalVar node with a new unique identifier
+    */
+  private def renameLocalVarUnique(lv: sil.LocalVar): sil.LocalVar = {
+    sil.LocalVar(nameGenerator.createUniqueIdentifier(lv.name))(lv.typ)
+  }
+
+  /** Create a new LocalVar node renamed to use the last written version of DSA
+    */
+  private def renameLocalVarLast(lv: sil.LocalVar): sil.LocalVar = {
+    sil.LocalVar(nameGenerator.getLastIdentifier(lv.name))(lv.typ)
+  }
+
+  /** Replace every local variable in the Exp with a new one, renamed to use the last written version of DSA
+    */
+  private def replaceLocalVarWithLast(exp: sil.Exp): sil.Exp = {
+    val pre: PartialFunction[sil.Node, sil.Node] = {
+      case n: LocalVar => renameLocalVarLast(n)
+    }
+    exp.transform(pre)()
+  }
+
   /** Do the DSA transformation on a single If stmt.
     */
   private def ifStmtToDSA(ifstmt: sil.If): sil.If = {
@@ -138,6 +113,31 @@ class MethodTransformer {
                                                   old + assignedVarsElse(variable)))
     }
     sil.If(dsaCond, newThen, newElse)()
+  }
+
+  /** Collect all the local variables which are assigned to within the Stmt.
+    * Returns a mapping from variable name to the number of times it has been assigned in the Stmt.
+    */
+  private def collectLocalVarsAssigned(stmt: sil.Stmt): mutable.Map[String, Int] = {
+    val varOccMap = mutable.Map[String, Int]()
+    stmt.visit({
+      case sil.LocalVarAssign(LocalVar(name), _) =>
+        val old = varOccMap.getOrElse(name, 0)
+        varOccMap.put(name, old + 1)
+    })
+    varOccMap
+  }
+
+  /** Collect all the local variables which have been versioned in the DSA process.
+    * @param originals The local vars as they were in the original program.
+    * @return A list of all newly created variables.
+    */
+  private def collectNewLocalVars(originals: Seq[sil.LocalVarDecl]): Seq[sil.LocalVarDecl] = {
+    val varVerMap = nameGenerator.variableMapSnapshot()
+    (for (sil.LocalVarDecl(varName, typ) <- originals if varVerMap.isDefinedAt(varName)) yield {
+      for (i <- 0 to varVerMap.getOrElse(varName, 0)) yield
+        sil.LocalVarDecl(nameGenerator.makeIdentifier(varName, i), typ)()
+    }).flatten
   }
 
   /** Do the DSA transformation on a single While loop.
