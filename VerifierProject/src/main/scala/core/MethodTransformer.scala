@@ -12,21 +12,29 @@ import scala.collection.mutable
 class MethodTransformer {
   private val nameGenerator: DSANameGenerator = new DSANameGenerator()
 
-  def renameLocalVarUnique(lv: sil.LocalVar): sil.LocalVar = {
+  /** Create a new LocalVar node with a new unique identifier
+    */
+  private def renameLocalVarUnique(lv: sil.LocalVar): sil.LocalVar = {
     sil.LocalVar(nameGenerator.createUniqueIdentifier(lv.name))(lv.typ)
   }
 
-  def renameLocalVarLast(lv: sil.LocalVar): sil.LocalVar = {
+  /** Create a new LocalVar node renamed to use the last written version of DSA
+    */
+  private def renameLocalVarLast(lv: sil.LocalVar): sil.LocalVar = {
     sil.LocalVar(nameGenerator.getLastIdentifier(lv.name))(lv.typ)
   }
 
-  def replaceLocalVarWithLast(exp: sil.Exp): sil.Exp = {
+  /** Replace every local variable in the Exp with a new one, renamed to use the last written version of DSA
+    */
+  private def replaceLocalVarWithLast(exp: sil.Exp): sil.Exp = {
     val pre: PartialFunction[sil.Node, sil.Node] = {
       case n: LocalVar => renameLocalVarLast(n)
     }
     exp.transform(pre)()
   }
 
+  /** Take a sequence of Exps and return an AST representing the conjunction of all the Exps
+    */
   def unflattenAnd(exps: Seq[sil.Exp]): sil.Exp = {
     exps.size match {
       case 0 => sil.BoolLit(true)()
@@ -37,7 +45,10 @@ class MethodTransformer {
     }
   }
 
-  def collectLocalVarsAssigned(stmt: sil.Stmt): mutable.Map[String, Int] = {
+  /** Collect all the local variables which are assigned to within the Stmt.
+    * Returns a mapping from variable name to the number of times it has been assigned in the Stmt.
+    */
+  private def collectLocalVarsAssigned(stmt: sil.Stmt): mutable.Map[String, Int] = {
     val varOccMap = mutable.Map[String, Int]()
     stmt.visit({
       case sil.LocalVarAssign(LocalVar(name), _) =>
@@ -47,8 +58,22 @@ class MethodTransformer {
     varOccMap
   }
 
-  // Keep the node a while loop as a placeholder, but put the transformed version in the body.
-  def transformWhileLoops(method: sil.Method): sil.Method = {
+  /** Collect all the local variables which have been versioned in the DSA process.
+    * @param originals The local vars as they were in the original program.
+    * @return A list of all newly created variables.
+    */
+  private def collectNewLocalVars(originals: Seq[sil.LocalVarDecl]): Seq[sil.LocalVarDecl] = {
+    val varVerMap = nameGenerator.variableMapSnapshot()
+    (for (sil.LocalVarDecl(varName, typ) <- originals if varVerMap.isDefinedAt(varName)) yield {
+      for (i <- 0 to varVerMap.getOrElse(varName, 0)) yield
+        sil.LocalVarDecl(nameGenerator.makeIdentifier(varName, i), typ)()
+    }).flatten
+  }
+
+  /** Do the transformation of while loops into a [[sil.NonDeterministicChoice]].
+    * Keep the node a while loop as a placeholder, but put the transformed version in the body.
+    */
+  private def transformWhileLoops(method: sil.Method): sil.Method = {
     val pre: PartialFunction[sil.Node, sil.Node] = {
       case sil.While(cond, invs, locals, body) =>
         val invariant: sil.Exp = unflattenAnd(invs)
@@ -70,7 +95,9 @@ class MethodTransformer {
     method.transform(pre)()
   }
 
-  def transformIfStmts[A<:sil.Node](method: A): A = {
+  /** Transform all if statements occurring in a AST node into a [[sil.NonDeterministicChoice]]
+    */
+  private def transformIfStmts[A<:sil.Node](method: A): A = {
     val post: PartialFunction[sil.Node, sil.Node] = {
       case sil.If(cond, thn, els) =>
         sil.NonDeterministicChoice(
@@ -87,7 +114,9 @@ class MethodTransformer {
     method.transform()(_ => true, post)
   }
 
-  def ifStmtToDSA(ifstmt: sil.If): sil.If = {
+  /** Do the DSA transformation on a single If stmt.
+    */
+  private def ifStmtToDSA(ifstmt: sil.If): sil.If = {
     val dsaCond: sil.Exp = replaceLocalVarWithLast(ifstmt.cond)
     val assignedVarsThen: mutable.Map[String, Int] = collectLocalVarsAssigned(ifstmt.thn)
     val assignedVarsElse: mutable.Map[String, Int] = collectLocalVarsAssigned(ifstmt.els)
@@ -111,7 +140,11 @@ class MethodTransformer {
     sil.If(dsaCond, newThen, newElse)()
   }
 
-  def whileStmtToDSA(whilestmt: sil.While): sil.Node = {
+  /** Do the DSA transformation on a single While loop.
+    * Assumes the while loop to already be in the intermediate form resulting from [[transformWhileLoops()]].
+    * Return the flattened version, no more sil.While node.
+    */
+  private def whileStmtToDSA(whilestmt: sil.While): sil.Node = {
     // simulate havocs by increasing the version of all variables assigned in the loop beforehand
     for ((name,_) <- collectLocalVarsAssigned(whilestmt.body)) {
       nameGenerator.increaseVersion(name)
@@ -122,7 +155,9 @@ class MethodTransformer {
     ))()
   }
 
-  def transformToDSA[A<:sil.Node](node: A): A = {
+  /** Transform a silver AST node into DSA form.
+    */
+  private def transformToDSA[A<:sil.Node](node: A): A = {
     val pre: PartialFunction[sil.Node, sil.Node] = {
       case n: sil.LocalVarAssign =>
         val newRhs: sil.Exp = replaceLocalVarWithLast(n.rhs)
@@ -134,14 +169,11 @@ class MethodTransformer {
     node.transform(pre)()
   }
 
-  def collectNewLocalVars(originals: Seq[sil.LocalVarDecl]): Seq[sil.LocalVarDecl] = {
-    val varVerMap = nameGenerator.variableMapSnapshot()
-    (for (sil.LocalVarDecl(varName, typ) <- originals if varVerMap.isDefinedAt(varName)) yield {
-      for (i <- 0 to varVerMap.getOrElse(varName, 0)) yield
-        sil.LocalVarDecl(nameGenerator.makeIdentifier(varName, i), typ)()
-    }).flatten
-  }
-
+  /** Transform a Method node. Eliminate all the while loops and if statements to non-deterministic choices,
+    * use DSA form and replace assignments with 'assume' statements ([[sil.Inhale]]).
+    * @param method The method to transform.
+    * @return The transformed method.
+    */
   def transform(method: sil.Method): sil.Method = {
     val noWhile: sil.Method = transformWhileLoops(method)
     val dsa: sil.Method = transformToDSA(noWhile)

@@ -12,22 +12,33 @@ class DSANameGenerator {
   val separator = "_"
   private val identCounts: mutable.HashMap[String, Int] = mutable.HashMap[String, Int]()
 
+  /** Get the latest version number of a variable. Return -1 if the variable has not been used before.
+    */
   def getVersion(name: String): Int = {
     identCounts.getOrElse(name, -1)
   }
 
+  /** Set the version of a variable to a given value.
+    */
   def setVersion(name: String, version: Int): Unit = {
     identCounts.put(name, version)
   }
 
+  /** Return an immutable copy of the mapping from variables to their latest version number.
+    */
   def variableMapSnapshot(): Map[String, Int] = {
     identCounts.toMap
   }
 
+  /** Create a new variable identifier from a variable name and the version number.
+    */
   def makeIdentifier(name: String, count: Int): String = {
     name + separator + count
   }
 
+  /** Create a new unique identifier for the given variable name.
+    * Note: if the version number has been set using [[setVersion()]], it might not actually be unique.
+    */
   def createUniqueIdentifier(name: String): String = {
     var lastCount: Int = identCounts.getOrElse(name, -1)
     if (lastCount >= 0) {
@@ -40,6 +51,8 @@ class DSANameGenerator {
     }
   }
 
+  /** Return the last created unique identifier.
+    */
   def getLastIdentifier(name: String): String = {
     val lastCount: Int = identCounts.getOrElse(name, -1)
     if (lastCount >= 0) {
@@ -49,6 +62,8 @@ class DSANameGenerator {
     }
   }
 
+  /** Increase the version number of a given variable.
+    */
   def increaseVersion(name:String): Unit = {
     val lastCount: Int = identCounts.getOrElse(name, -1)
     if (lastCount >= 0) {
