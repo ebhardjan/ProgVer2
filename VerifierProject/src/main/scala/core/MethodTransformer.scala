@@ -10,7 +10,7 @@ import scala.collection.mutable
   * Created by Severin on 2017-04-05.
   */
 class MethodTransformer {
-  private val nameGenerator: DSANameGenerator = new DSANameGenerator()
+  private var nameGenerator: DSANameGenerator = _
 
   /** Take a sequence of Exps and return an AST representing the conjunction of all the Exps
     */
@@ -22,6 +22,18 @@ class MethodTransformer {
         case fst :: rest => rest.foldLeft[sil.Exp](fst)((old, next) => sil.And(old, next)())
       }
     }
+  }
+
+  /** Recursively visit node, flattening all the [[sil.Seqn]] nodes to not conatain nested sequences.
+    */
+  def flattenSequences[A<:sil.Node](node: A): A = {
+    val pre: PartialFunction[sil.Node, sil.Node] = {
+      case sil.Seqn(ss: Seq[sil.Stmt]) => sil.Seqn(ss.flatMap({
+        case sil.Seqn(ssI) => ssI.flatMap(n => Seq(flattenSequences(n)))
+        case n: sil.Stmt => Seq(n)
+      }))()
+    }
+    node.transform(pre)()
   }
 
   /** Do the transformation of while loops into a [[sil.NonDeterministicChoice]].
@@ -51,7 +63,7 @@ class MethodTransformer {
 
   /** Transform all if statements occurring in a AST node into a [[sil.NonDeterministicChoice]]
     */
-  private def transformIfStmts[A<:sil.Node](method: A): A = {
+  private def transformIfStmts[A<:sil.Node](node: A): A = {
     val post: PartialFunction[sil.Node, sil.Node] = {
       case sil.If(cond, thn, els) =>
         sil.NonDeterministicChoice(
@@ -65,7 +77,19 @@ class MethodTransformer {
           ))()
         )()
     }
-    method.transform()(_ => true, post)
+    node.transform()(_ => true, post)
+  }
+
+  /** Transform assert statements to be assert; assume.
+    */
+  private def transformAssertStmts[A<:sil.Node](node: A): A = {
+    val pre: PartialFunction[sil.Node, sil.Node] = {
+      case n @ sil.Assert(exp) => sil.Seqn(Seq(
+        n,
+        sil.Inhale(exp)()
+      ))()
+    }
+    node.transform(pre)()
   }
 
   /** Create a new LocalVar node with a new unique identifier
@@ -89,30 +113,10 @@ class MethodTransformer {
     exp.transform(pre)()
   }
 
-  /** Do the DSA transformation on a single If stmt.
-    */
-  private def ifStmtToDSA(ifstmt: sil.If): sil.If = {
-    val dsaCond: sil.Exp = replaceLocalVarWithLast(ifstmt.cond)
-    val assignedVarsThen: mutable.Map[String, Int] = collectLocalVarsAssigned(ifstmt.thn)
-    val assignedVarsElse: mutable.Map[String, Int] = collectLocalVarsAssigned(ifstmt.els)
-    val assignedInBoth: Set[String] = assignedVarsThen.keySet.intersect(assignedVarsElse.keySet).toSet
-    val originalAssignments: Map[String, Int] = (for (variable <- assignedInBoth)
-      yield variable -> nameGenerator.getVersion(variable)).toMap
-    // replace variables in then part
-    val newThen = transformToDSA(ifstmt.thn)
-    // reset version numbers for common variables
-    for (variable <- assignedInBoth) {
-      nameGenerator.setVersion(variable, originalAssignments(variable))
+  private def addDeclaredVarsToNameGenerator(varDecls: Seq[sil.LocalVarDecl]) = {
+    for (varDecl <- varDecls) {
+      nameGenerator.createUniqueIdentifier(varDecl.name)
     }
-    // replace variables in else part
-    val newElse = transformToDSA(ifstmt.els)
-    // fix version numbers to reflect the maximum
-    for (variable <- assignedInBoth) {
-      val old = originalAssignments(variable)
-      nameGenerator.setVersion(variable, math.max(old + assignedVarsThen(variable),
-                                                  old + assignedVarsElse(variable)))
-    }
-    sil.If(dsaCond, newThen, newElse)()
   }
 
   /** Collect all the local variables which are assigned to within the Stmt.
@@ -138,6 +142,32 @@ class MethodTransformer {
       for (i <- 0 to varVerMap.getOrElse(varName, 0)) yield
         sil.LocalVarDecl(nameGenerator.makeIdentifier(varName, i), typ)()
     }).flatten
+  }
+
+  /** Do the DSA transformation on a single If stmt.
+    */
+  private def ifStmtToDSA(ifstmt: sil.If): sil.If = {
+    val dsaCond: sil.Exp = replaceLocalVarWithLast(ifstmt.cond)
+    val assignedVarsThen: mutable.Map[String, Int] = collectLocalVarsAssigned(ifstmt.thn)
+    val assignedVarsElse: mutable.Map[String, Int] = collectLocalVarsAssigned(ifstmt.els)
+    val assignedInBoth: Set[String] = assignedVarsThen.keySet.intersect(assignedVarsElse.keySet).toSet
+    val originalAssignments: Map[String, Int] = (for (variable <- assignedInBoth)
+      yield variable -> nameGenerator.getVersion(variable)).toMap
+    // replace variables in then part
+    val newThen = transformToDSA(ifstmt.thn)
+    // reset version numbers for common variables
+    for (variable <- assignedInBoth) {
+      nameGenerator.setVersion(variable, originalAssignments(variable))
+    }
+    // replace variables in else part
+    val newElse = transformToDSA(ifstmt.els)
+    // fix version numbers to reflect the maximum
+    for (variable <- assignedInBoth) {
+      val old = originalAssignments(variable)
+      nameGenerator.setVersion(variable, math.max(old + assignedVarsThen(variable),
+        old + assignedVarsElse(variable)))
+    }
+    sil.If(dsaCond, newThen, newElse)()
   }
 
   /** Do the DSA transformation on a single While loop.
@@ -175,10 +205,16 @@ class MethodTransformer {
     * @return The transformed method.
     */
   def transform(method: sil.Method): sil.Method = {
-    val noWhile: sil.Method = transformWhileLoops(method)
-    val dsa: sil.Method = transformToDSA(noWhile)
-    dsa.locals ++= collectNewLocalVars(dsa.locals)
-    transformIfStmts(dsa)
+    var intermediate: sil.Method = transformWhileLoops(method)
+    nameGenerator = new DSANameGenerator()
+    addDeclaredVarsToNameGenerator(method.formalArgs)
+    addDeclaredVarsToNameGenerator(method.locals)
+    addDeclaredVarsToNameGenerator(method.formalReturns)
+    intermediate = transformToDSA(intermediate)
+    intermediate.locals = collectNewLocalVars(intermediate.locals)
+    intermediate = transformIfStmts(intermediate)
+    intermediate = transformAssertStmts(intermediate)
+    flattenSequences(intermediate)
   }
 
 }
