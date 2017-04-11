@@ -36,31 +36,6 @@ class MethodTransformer {
     node.transform(pre)()
   }
 
-  /** Do the transformation of while loops into a [[sil.NonDeterministicChoice]].
-    * Keep the node a while loop as a placeholder, but put the transformed version in the body.
-    */
-  private def transformWhileLoops(method: sil.Method): sil.Method = {
-    val pre: PartialFunction[sil.Node, sil.Node] = {
-      case sil.While(cond, invs, locals, body) =>
-        val invariant: sil.Exp = unflattenAnd(invs)
-        sil.While(
-          sil.BoolLit(true)(),
-          invs,
-          locals,
-          sil.NonDeterministicChoice(
-            sil.Seqn(Seq(
-              sil.Inhale(sil.And(invariant, cond)())(),
-              sil.Assert(invariant)(),
-              body,
-              sil.Inhale(sil.BoolLit(false)())()
-            ))(),
-            sil.Inhale(sil.And(invariant, sil.Not(cond)())())()
-          )()
-        )()
-    }
-    method.transform(pre)()
-  }
-
   /** Transform all if statements occurring in a AST node into a [[sil.NonDeterministicChoice]]
     */
   private def transformIfStmts[A<:sil.Node](node: A): A = {
@@ -151,14 +126,11 @@ class MethodTransformer {
     val assignedVarsThen: mutable.Map[String, Int] = collectLocalVarsAssigned(ifstmt.thn)
     val assignedVarsElse: mutable.Map[String, Int] = collectLocalVarsAssigned(ifstmt.els)
     val assignedInBoth: Set[String] = assignedVarsThen.keySet.intersect(assignedVarsElse.keySet).toSet
-    val originalAssignments: Map[String, Int] = (for (variable <- assignedInBoth)
-      yield variable -> nameGenerator.getVersion(variable)).toMap
+    val originalAssignments: Map[String, Int] = nameGenerator.variableMapSnapshot(assignedInBoth)
     // replace variables in then part
     val newThen = transformToDSA(ifstmt.thn)
     // reset version numbers for common variables
-    for (variable <- assignedInBoth) {
-      nameGenerator.setVersion(variable, originalAssignments(variable))
-    }
+    nameGenerator.bulkUpdateVersions(originalAssignments)
     // replace variables in else part
     val newElse = transformToDSA(ifstmt.els)
     // fix version numbers to reflect the maximum
@@ -170,19 +142,31 @@ class MethodTransformer {
     sil.If(dsaCond, newThen, newElse)()
   }
 
-  /** Do the DSA transformation on a single While loop.
-    * Assumes the while loop to already be in the intermediate form resulting from [[transformWhileLoops()]].
-    * Return the flattened version, no more sil.While node.
+  /** Do the transformation on a [[sil.While]] loop.
     */
-  private def whileStmtToDSA(whilestmt: sil.While): sil.Node = {
+  private def transformWhileStmt(whilestmt: sil.While): sil.Node = {
+    val invariant: sil.Exp = unflattenAnd(whilestmt.invs)
+    val dsaInvariantBefore: sil.Exp = transformToDSA(invariant)
     // simulate havocs by increasing the version of all variables assigned in the loop beforehand
-    for ((name,_) <- collectLocalVarsAssigned(whilestmt.body)) {
-      nameGenerator.increaseVersion(name)
-    }
-    sil.Seqn(Seq(
-      sil.Assert(transformToDSA(unflattenAnd(whilestmt.invs)))(),
-      transformToDSA(whilestmt.body)
+    val varsAssignedInBody: Set[String] = collectLocalVarsAssigned(whilestmt.body).keys.toSet
+    nameGenerator.increaseVersion(varsAssignedInBody)
+    val dsaInvariant: sil.Exp = transformToDSA(unflattenAnd(whilestmt.invs))
+    val dsaCond: sil.Exp = transformToDSA(whilestmt.cond)
+    val varVersionsAfterHavoc: Map[String, Int] = nameGenerator.variableMapSnapshot(varsAssignedInBody)
+    val result = sil.Seqn(Seq(
+      sil.Assert(dsaInvariantBefore)(),
+      sil.NonDeterministicChoice(
+        sil.Seqn(Seq(
+          sil.Inhale(sil.And(dsaInvariant, dsaCond)())(),
+          transformToDSA(whilestmt.body),
+          sil.Assert(dsaInvariant)(),
+          sil.Inhale(sil.BoolLit(false)())()
+        ))(),
+        sil.Inhale(sil.And(dsaInvariant, sil.Not(dsaCond)())())()
+      )()
     ))()
+    nameGenerator.bulkUpdateVersions(varVersionsAfterHavoc)
+    result
   }
 
   /** Transform a silver AST node into DSA form.
@@ -194,7 +178,7 @@ class MethodTransformer {
         sil.Inhale(sil.EqCmp(renameLocalVarUnique(n.lhs), newRhs)())()
       case n: sil.Exp => replaceLocalVarWithLast(n)
       case n: sil.If => ifStmtToDSA(n)
-      case n: sil.While => whileStmtToDSA(n)
+      case n: sil.While => transformWhileStmt(n)
     }
     node.transform(pre)()
   }
@@ -205,12 +189,12 @@ class MethodTransformer {
     * @return The transformed method.
     */
   def transform(method: sil.Method): sil.Method = {
-    var intermediate: sil.Method = transformWhileLoops(method)
+//    var intermediate: sil.Method = transformWhileLoops(method)
     nameGenerator = new DSANameGenerator()
     addDeclaredVarsToNameGenerator(method.formalArgs)
     addDeclaredVarsToNameGenerator(method.locals)
     addDeclaredVarsToNameGenerator(method.formalReturns)
-    intermediate = transformToDSA(intermediate)
+    var intermediate = transformToDSA(method)
     intermediate.locals = collectNewLocalVars(intermediate.locals)
     intermediate = transformIfStmts(intermediate)
     intermediate = transformAssertStmts(intermediate)
