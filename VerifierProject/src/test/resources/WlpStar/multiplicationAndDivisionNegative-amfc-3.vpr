@@ -1,0 +1,21 @@
+// tests weather we handle multiplication and division correctly (negative case)
+// expected assertion-might-fail-count: 3
+method multiplicationAndDivision() {
+    var a: Int
+    var b: Int
+    var c: Int
+    var d: Int
+    var e: Int
+
+    assume a == 4
+    assume b == 2
+
+    assume c == (a \ b)
+    assert c == 3
+
+    assume d == (a * b)
+    assert d == 5
+
+    assume e == (a % 2)
+    assert e == 1
+}

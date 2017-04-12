@@ -1,0 +1,8 @@
+// tests if we handle programs that have no assertions correctly
+// expected assertion-might-fail-count: 0
+method test() {
+    var a: Int
+    var b: Int
+    assume a == 2
+    assume b == 2
+}

@@ -1,0 +1,16 @@
+// tests if assertions kill traces that make the assertion false
+// reduced version (after DSA conversion and reduction) of sequenceOfAssertions-amfc-1.vpr
+// expected assertion-might-fail-count: 1
+method test() {
+    var a0: Int
+    var a1: Int
+
+    // this assertion is violated
+    assert a0 < 2
+    assume a1 < 2
+
+    // only traces where a is smaller than 2 should survive up to here
+
+    // this assertion should hold
+    assert a1 < 3
+}
