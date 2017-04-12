@@ -1,0 +1,14 @@
+method test() {
+    var x: Int := 10
+    var count: Int := 0
+
+    while(x>0) 
+        invariant x >= 0
+        invariant count == 10 - x
+    {
+        count := count + 1
+        x := x - 1
+    }
+    assert x == 0
+    assert count == 10
+}
