@@ -82,6 +82,10 @@ class MyVerifier extends BareboneVerifier {
       // reduction to smt2 formula
       val method = transformer.transform(m)
 
+      if (config.printTransformed.getOrElse(false)) {
+        println("Transformed method:\n" + method + "\n")
+      }
+
       val declarations = DeclarationCollector.collectDeclarations(method.locals)
       val declarationsString = SmtLibUtils.declarationString(declarations)
       val verificationConditions: Set[VerificationCondition] = WlpStar.wlpStar(method.body, Set())
