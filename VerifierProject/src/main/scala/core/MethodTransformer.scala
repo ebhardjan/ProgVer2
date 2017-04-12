@@ -1,7 +1,7 @@
 package core
 
 import util.DSANameGenerator
-import viper.silver.ast.LocalVar
+import viper.silver.ast.{Exp, Inhale, LocalVar}
 import viper.silver.{ast => sil}
 
 import scala.collection.mutable
@@ -76,6 +76,7 @@ class MethodTransformer {
   private def renameLocalVarLast(lv: sil.LocalVar): sil.LocalVar = {
     sil.LocalVar(nameGenerator.getLastIdentifier(lv.name))(lv.typ)
   }
+
   /** Replace every local variable in the Exp with a new one, renamed to use the last written version of DSA
     */
   private def replaceLocalVarWithLast(exp: sil.Exp): sil.Exp = {
@@ -96,12 +97,12 @@ class MethodTransformer {
   /** Collect all the local variables which are assigned to within the Stmt.
     * Returns a mapping from variable name to the number of times it has been assigned in the Stmt.
     */
-  private def collectLocalVarsAssigned(stmt: sil.Stmt): mutable.Map[String, Int] = {
-    val varOccMap = mutable.Map[String, Int]()
+  private def collectLocalVarsAssigned(stmt: sil.Stmt): mutable.Map[sil.LocalVar, Int] = {
+    val varOccMap = mutable.Map[sil.LocalVar, Int]()
     stmt.visit({
-      case sil.LocalVarAssign(LocalVar(name), _) =>
-        val old = varOccMap.getOrElse(name, 0)
-        varOccMap.put(name, old + 1)
+      case sil.LocalVarAssign(lv, _) =>
+        val old = varOccMap.getOrElse(lv, 0)
+        varOccMap.put(lv, old + 1)
     })
     varOccMap
   }
@@ -118,14 +119,26 @@ class MethodTransformer {
     }).flatten
   }
 
+  private def setVariableVersionsToMax(assignedVarsFirst: mutable.Map[LocalVar, Int],
+                                       assignedVarsSecond: mutable.Map[LocalVar, Int],
+                                       originalAssignments: Map[String, Int]) = {
+    val assignedInBoth: Set[LocalVar] = assignedVarsFirst.keySet.intersect(assignedVarsSecond.keySet).toSet
+    for (variable <- assignedInBoth) {
+      val old = originalAssignments(variable.name)
+      nameGenerator.setVersion(variable.name, math.max(old + assignedVarsFirst(variable),
+        old + assignedVarsSecond(variable)))
+    }
+  }
+
   /** Do the DSA transformation on a single If stmt.
     */
   private def ifStmtToDSA(ifstmt: sil.If): sil.If = {
-    val dsaCond: sil.Exp = replaceLocalVarWithLast(ifstmt.cond)
-    val assignedVarsThen: mutable.Map[String, Int] = collectLocalVarsAssigned(ifstmt.thn)
-    val assignedVarsElse: mutable.Map[String, Int] = collectLocalVarsAssigned(ifstmt.els)
-    val assignedInBoth: Set[String] = assignedVarsThen.keySet.intersect(assignedVarsElse.keySet).toSet
-    val originalAssignments: Map[String, Int] = nameGenerator.variableMapSnapshot(assignedInBoth)
+    val dsaCond: Exp = replaceLocalVarWithLast(ifstmt.cond)
+    val assignedVarsThen: mutable.Map[LocalVar, Int] = collectLocalVarsAssigned(ifstmt.thn)
+    val assignedVarsElse: mutable.Map[LocalVar, Int] = collectLocalVarsAssigned(ifstmt.els)
+    val originalAssignments: Map[String, Int] =
+      nameGenerator.variableMapSnapshot(
+        (assignedVarsThen.keySet ++ assignedVarsElse.keySet).map(lv => lv.name).toSet)
     // replace variables in then part
     val newThen = transformToDSA(ifstmt.thn)
     // reset version numbers for common variables
@@ -133,12 +146,32 @@ class MethodTransformer {
     // replace variables in else part
     val newElse = transformToDSA(ifstmt.els)
     // fix version numbers to reflect the maximum
-    for (variable <- assignedInBoth) {
-      val old = originalAssignments(variable)
-      nameGenerator.setVersion(variable, math.max(old + assignedVarsThen(variable),
-        old + assignedVarsElse(variable)))
+    setVariableVersionsToMax(assignedVarsThen, assignedVarsElse, originalAssignments)
+    // add assignment statements where needed as the number of assigned versions per branch might differ
+    var additionalThenAssigns: Seq[Inhale] = Seq()
+    var additionalElseAssigns: Seq[Inhale] = Seq()
+
+    def additionalAssert(variable: LocalVar, old: Int, first: Int, second: Int): Inhale = {
+      sil.Inhale(
+        sil.EqCmp(
+          sil.LocalVar(nameGenerator.makeIdentifier(variable.name, old + first))(variable.typ),
+          LocalVar(nameGenerator.makeIdentifier(variable.name, old + second))(variable.typ))()
+      )()
     }
-    sil.If(dsaCond, newThen, newElse)()
+    for (variable <- assignedVarsThen.keys ++ assignedVarsElse.keys) {
+      val old = originalAssignments(variable.name)
+      val thenN = assignedVarsThen.getOrElse(variable, 0)
+      val elseN = assignedVarsElse.getOrElse(variable, 0)
+      if (thenN > elseN) {
+        additionalElseAssigns = additionalAssert(variable, old, thenN, elseN) +: additionalElseAssigns
+      } else if (thenN < elseN) {
+        additionalThenAssigns = additionalAssert(variable, old, elseN, thenN) +: additionalThenAssigns
+      }
+    }
+    sil.If(dsaCond,
+      sil.Seqn(newThen +: additionalThenAssigns)(),
+      sil.Seqn(newElse +: additionalElseAssigns)()
+    )()
   }
 
   /** Do the transformation on a [[sil.While]] loop.
@@ -147,7 +180,8 @@ class MethodTransformer {
     val invariant: sil.Exp = unflattenAnd(whilestmt.invs)
     val dsaInvariantBefore: sil.Exp = transformToDSA(invariant)
     // simulate havocs by increasing the version of all variables assigned in the loop beforehand
-    val varsAssignedInBody: Set[String] = collectLocalVarsAssigned(whilestmt.body).keys.toSet
+    val varsAssignedInBody: Set[String] = collectLocalVarsAssigned(whilestmt.body).keys
+      .map(lv => lv.name).toSet
     nameGenerator.increaseVersion(varsAssignedInBody)
     val dsaInvariant: sil.Exp = transformToDSA(unflattenAnd(whilestmt.invs))
     val dsaCond: sil.Exp = transformToDSA(whilestmt.cond)

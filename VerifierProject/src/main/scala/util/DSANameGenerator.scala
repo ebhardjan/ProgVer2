@@ -50,8 +50,8 @@ class DSANameGenerator {
 
   /** Create a new variable identifier from a variable name and the version number.
     */
-  def makeIdentifier(name: String, count: Int): String = {
-    name + separator + count
+  def makeIdentifier(name: String, version: Int): String = {
+    name + separator + version
   }
 
   /** Create a new unique identifier for the given variable name.
