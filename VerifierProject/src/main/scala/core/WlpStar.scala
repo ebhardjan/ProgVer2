@@ -1,5 +1,6 @@
 package core
 
+import smtlib.parser.Terms
 import smtlib.parser.Terms._
 import smtlib.theories.Core._
 import smtlib.theories.{Core, Ints}
@@ -89,7 +90,17 @@ object WlpStar {
         QualifiedIdentifier(SimpleIdentifier(SSymbol(name)))
       case IntLit(i) =>
         NumeralLit(i)
+
+      //TODO triggers!
+      case ast.Forall(vars, triggers, body) =>
+        Terms.Forall(sortedVar(vars.head), vars.tail.map(v => sortedVar(v)), toTerm(body))
+      case ast.Exists(vars, body) =>
+        Terms.Exists(sortedVar(vars.head), vars.tail.map(v => sortedVar(v)), toTerm(body))
     }
+  }
+
+  def sortedVar(localVarDecl: LocalVarDecl): SortedVar = {
+    SortedVar(SSymbol(localVarDecl.name), DeclarationCollector.toSort(localVarDecl.typ))
   }
 
 }

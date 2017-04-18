@@ -13,7 +13,7 @@ object DeclarationCollector {
     locals.map(l => l.name -> toSort(l.typ)).toMap
   }
 
-  private def toSort(typ: Type): Sort = {
+  def toSort(typ: Type): Sort = {
     typ match {
       case Int => Sort(SimpleIdentifier(SSymbol("Int")))
       case Bool => Sort(SimpleIdentifier(SSymbol("Bool")))

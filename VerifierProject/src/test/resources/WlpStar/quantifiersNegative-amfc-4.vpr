@@ -1,0 +1,15 @@
+method negativeForall() {
+    assert forall i: Int :: i <= 0
+}
+
+method negativeForall2() {
+    assert forall i: Int, j: Int :: i + j != i + j
+}
+
+method negativeExists() {
+    assert exists i: Int :: i + i == i && i != 0
+}
+
+method negativeExists2() {
+    assert exists i: Int, j: Int :: i + j != j + i
+}
