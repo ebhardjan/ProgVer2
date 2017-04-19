@@ -86,12 +86,31 @@ class MethodTransformer {
     exp.transform(pre)()
   }
 
-  /** Add all variable names in the input Seq to the name Generator.
+  /** Add all declared variables in method to the name generator.
     */
-  private def addDeclaredVarsToNameGenerator(varDecls: Seq[sil.LocalVarDecl]) = {
+  private def addDeclaredVarsToNameGenerator(method: sil.Method): Seq[sil.LocalVarDecl] = {
+    addDeclaredVarsToNameGenerator(method.formalArgs)
+    addDeclaredVarsToNameGenerator(method.formalReturns)
+    addDeclaredVarsToNameGenerator(method.locals)
+    val bodyDecls = collectLocalVarsDeclared(method.body).toSeq
+    addDeclaredVarsToNameGenerator(bodyDecls)
+
+    method.formalArgs ++ method.formalReturns ++ method.locals ++ bodyDecls
+  }
+  /** Add all variable names in the input Seq to the name generator.
+    */
+  private def addDeclaredVarsToNameGenerator(varDecls: Seq[sil.LocalVarDecl]): Unit = {
     for (varDecl <- varDecls) {
-      if (nameGenerator.getVersion(varDecl.name) != -1) nameGenerator.createUniqueIdentifier(varDecl.name)
+      if (nameGenerator.getVersion(varDecl.name) == -1) nameGenerator.createUniqueIdentifier(varDecl.name)
     }
+  }
+
+  private def collectLocalVarsDeclared(stmt: sil.Stmt): Set[sil.LocalVarDecl] = {
+    val declSet: mutable.Set[sil.LocalVarDecl] = mutable.Set()
+    stmt.visit({
+      case n: sil.LocalVarDecl => declSet.add(n)
+    })
+    declSet.toSet
   }
 
   /** Collect all the local variables which are assigned to within the Stmt.
@@ -181,7 +200,7 @@ class MethodTransformer {
     val dsaInvariantBefore: sil.Exp = transformToDSA(invariant)
     // simulate havocs by increasing the version of all variables assigned in the loop beforehand
     val varsAssignedInBody: Set[String] = collectLocalVarsAssigned(whilestmt.body).keys
-      .map(lv => lv.name).toSet
+      .map(lv => lv.name).toSet -- whilestmt.locals.map(lvd => lvd.name)
     nameGenerator.increaseVersion(varsAssignedInBody)
     val dsaInvariant: sil.Exp = transformToDSA(unflattenAnd(whilestmt.invs))
     val dsaCond: sil.Exp = transformToDSA(whilestmt.cond)
@@ -223,11 +242,9 @@ class MethodTransformer {
     */
   def transform(method: sil.Method): sil.Method = {
     nameGenerator = new DSANameGenerator()
-    addDeclaredVarsToNameGenerator(method.formalArgs)
-    addDeclaredVarsToNameGenerator(method.locals)
-    addDeclaredVarsToNameGenerator(method.formalReturns)
+    val declarations: Seq[sil.LocalVarDecl] = addDeclaredVarsToNameGenerator(method)
     var intermediate = transformToDSA(method)
-    intermediate.locals = collectNewLocalVars(intermediate.locals)
+    intermediate.locals = collectNewLocalVars(declarations)
     intermediate = transformIfStmts(intermediate)
     intermediate = transformAssertStmts(intermediate)
     flattenSequences(intermediate)
