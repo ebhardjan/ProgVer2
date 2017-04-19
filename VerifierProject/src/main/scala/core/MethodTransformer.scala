@@ -22,12 +22,12 @@ class MethodTransformer {
     }
   }
 
-  /** Recursively visit node, flattening all the [[sil.Seqn]] nodes to not conatain nested sequences.
+  /** Recursively visit node, flattening all the [[sil.Seqn]] nodes to not contain nested sequences.
     */
   def flattenSequences[A<:sil.Node](node: A): A = {
     val pre: PartialFunction[sil.Node, sil.Node] = {
       case sil.Seqn(ss: Seq[sil.Stmt]) => sil.Seqn(ss.flatMap({
-        case sil.Seqn(ssI) => ssI.flatMap(n => Seq(flattenSequences(n)))
+        case n: sil.Seqn => flattenSequences(n).ss
         case n: sil.Stmt => Seq(n)
       }))()
     }
