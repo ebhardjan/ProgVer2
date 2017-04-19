@@ -19,3 +19,6 @@ lazy val scalaSmtlib = RootProject(file("../scala-smtlib"))
 
 val main = Project(id = "VerifierProject", base = file(".")).dependsOn(silver,scalaSmtlib)
 
+// skip tests when assembling the jar
+test in assembly := {}
+
