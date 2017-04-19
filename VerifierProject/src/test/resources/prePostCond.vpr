@@ -1,0 +1,17 @@
+method gcd(a: Int, b: Int) returns (x: Int)
+    requires a >= 0
+    requires b >= 0
+    ensures x >= 0
+    // ensures (exists k: Int :: a == k * x)
+    // ensures (exists k: Int :: b == k * x)
+{
+    x := a
+    var y: Int := b
+    while (y != 0)
+        invariant x >= 0 && y >= 0
+    {
+        var t: Int := y
+        y := x % y
+        x := t
+    }
+}
