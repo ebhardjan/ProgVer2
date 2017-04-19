@@ -72,6 +72,7 @@ object Nodes {
           case Fresh(vars) => vars
           case Constraining(vars, body) => vars ++ Seq(body)
           case LocalVarDeclStmt(decl) => Seq(decl)
+          case NonDeterministicChoice(choiceA, choiceB) => Seq(choiceA, choiceB)
         }
       case vd: LocalVarDecl => Nil
       case e: Exp =>
