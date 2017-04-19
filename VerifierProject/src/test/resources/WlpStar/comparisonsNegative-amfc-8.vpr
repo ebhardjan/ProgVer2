@@ -1,6 +1,6 @@
 // tests weather we handle comparisons correctly (negative case)
 // expected assertion-might-fail-count: 8
-method comparisons() {
+method equals() {
     var a: Int
     var b: Int
 
@@ -8,13 +8,74 @@ method comparisons() {
     assume b == 3
 
     assert a == b
+}
+
+method notEquals() {
+    var a: Int
+    var b: Int
+
+    assume a == 2
+    assume b == 3
+
     assert a != a
+}
+
+method gt() {
+    var a: Int
+    var b: Int
+
+    assume a == 2
+    assume b == 3
 
     assert a > b
+}
+
+method gte() {
+    var a: Int
+    var b: Int
+
+    assume a == 2
+    assume b == 3
+
     assert a >= b
+}
+
+method ngte() {
+    var a: Int
+    var b: Int
+
+    assume a == 2
+    assume b == 3
+
     assert !(a >= a)
+}
+
+method lt() {
+    var a: Int
+    var b: Int
+
+    assume a == 2
+    assume b == 3
 
     assert b < a
+}
+
+method lte() {
+    var a: Int
+    var b: Int
+
+    assume a == 2
+    assume b == 3
+
     assert b <= a
+}
+
+method nlte() {
+    var a: Int
+    var b: Int
+
+    assume a == 2
+    assume b == 3
+
     assert !(b <= b)
 }
