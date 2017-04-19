@@ -79,9 +79,14 @@ class MethodTransformer {
 
   /** Replace every local variable in the Exp with a new one, renamed to use the last written version of DSA
     */
-  private def replaceLocalVarWithLast(exp: sil.Exp): sil.Exp = {
+  private def replaceLocalVarWithVersion(exp: sil.Exp, version: Int = -1): sil.Exp = {
     val pre: PartialFunction[sil.Node, sil.Node] = {
-      case n: LocalVar => renameLocalVarLast(n)
+      case n: LocalVar =>
+        if (version < 0) {
+          renameLocalVarLast(n)
+        } else {
+          sil.LocalVar(nameGenerator.makeIdentifier(n.name, version))(n.typ)
+        }
     }
     exp.transform(pre)()
   }
@@ -105,6 +110,8 @@ class MethodTransformer {
     }
   }
 
+  /** Collect all variable declarations in the statement to a set.
+    */
   private def collectLocalVarsDeclared(stmt: sil.Stmt): Set[sil.LocalVarDecl] = {
     val declSet: mutable.Set[sil.LocalVarDecl] = mutable.Set()
     stmt.visit({
@@ -152,7 +159,7 @@ class MethodTransformer {
   /** Do the DSA transformation on a single If stmt.
     */
   private def ifStmtToDSA(ifstmt: sil.If): sil.If = {
-    val dsaCond: Exp = replaceLocalVarWithLast(ifstmt.cond)
+    val dsaCond: Exp = replaceLocalVarWithVersion(ifstmt.cond)
     val assignedVarsThen: mutable.Map[LocalVar, Int] = collectLocalVarsAssigned(ifstmt.thn)
     val assignedVarsElse: mutable.Map[LocalVar, Int] = collectLocalVarsAssigned(ifstmt.els)
     val originalAssignments: Map[String, Int] =
@@ -221,14 +228,32 @@ class MethodTransformer {
     result
   }
 
+  /** Take a method and put the preconditions into the body as assume statements.
+    */
+  private def addPreConditions(method: sil.Method): sil.Method = {
+    val preconds: Seq[sil.Exp] = for (cond <- method.pres) yield replaceLocalVarWithVersion(cond, 0)
+    val result = method
+    result.body = sil.Seqn(preconds.map(exp => sil.Inhale(exp)()) :+ method.body)()
+    result
+  }
+
+  /** Take a method and put the postconditions into the body as assert statements.
+    */
+  private def addPostConditions(method: sil.Method): sil.Method = {
+    val postconds: Seq[sil.Exp] = for (cond <- method.posts) yield replaceLocalVarWithVersion(cond)
+    val result = method
+    result.body = sil.Seqn(method.body +: postconds.map(exp => sil.Assert(exp)()))()
+    result
+  }
+
   /** Transform a silver AST node into DSA form.
     */
   private def transformToDSA[A<:sil.Node](node: A): A = {
     val pre: PartialFunction[sil.Node, sil.Node] = {
       case n: sil.LocalVarAssign =>
-        val newRhs: sil.Exp = replaceLocalVarWithLast(n.rhs)
+        val newRhs: sil.Exp = replaceLocalVarWithVersion(n.rhs)
         sil.Inhale(sil.EqCmp(renameLocalVarUnique(n.lhs), newRhs)())()
-      case n: sil.Exp => replaceLocalVarWithLast(n)
+      case n: sil.Exp => replaceLocalVarWithVersion(n)
       case n: sil.If => ifStmtToDSA(n)
       case n: sil.While => transformWhileStmt(n)
     }
@@ -243,10 +268,13 @@ class MethodTransformer {
   def transform(method: sil.Method): sil.Method = {
     nameGenerator = new DSANameGenerator()
     val declarations: Seq[sil.LocalVarDecl] = addDeclaredVarsToNameGenerator(method)
-    var intermediate = transformToDSA(method)
+    var intermediate = method
+    intermediate.body = transformToDSA(method.body)
     intermediate.locals = collectNewLocalVars(declarations)
     intermediate = transformIfStmts(intermediate)
     intermediate = transformAssertStmts(intermediate)
+    intermediate = addPreConditions(intermediate)
+    intermediate = addPostConditions(intermediate)
     flattenSequences(intermediate)
   }
 
