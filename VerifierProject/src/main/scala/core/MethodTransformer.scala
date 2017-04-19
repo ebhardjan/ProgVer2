@@ -148,11 +148,11 @@ class MethodTransformer {
   private def setVariableVersionsToMax(assignedVarsFirst: mutable.Map[LocalVar, Int],
                                        assignedVarsSecond: mutable.Map[LocalVar, Int],
                                        originalAssignments: Map[String, Int]) = {
-    val assignedInBoth: Set[LocalVar] = assignedVarsFirst.keySet.intersect(assignedVarsSecond.keySet).toSet
-    for (variable <- assignedInBoth) {
+    val assignedInEither: Set[LocalVar] = assignedVarsFirst.keySet.union(assignedVarsSecond.keySet).toSet
+    for (variable <- assignedInEither) {
       val old = originalAssignments(variable.name)
-      nameGenerator.setVersion(variable.name, math.max(old + assignedVarsFirst(variable),
-        old + assignedVarsSecond(variable)))
+      nameGenerator.setVersion(variable.name,
+        math.max(old + assignedVarsFirst.getOrElse(variable, 0), old + assignedVarsSecond.getOrElse(variable, 0)))
     }
   }
 
