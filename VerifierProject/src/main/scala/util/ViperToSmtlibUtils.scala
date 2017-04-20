@@ -87,7 +87,6 @@ object ViperToSmtlibUtils {
       case IntLit(i) =>
         NumeralLit(i)
 
-      //TODO test triggers!
       case ast.Forall(vars, triggers, body) =>
         Terms.Forall(sortedVar(vars.head), vars.tail.map(v => sortedVar(v)), addTriggers(toTerm(body), triggers))
 

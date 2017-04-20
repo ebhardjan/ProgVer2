@@ -169,10 +169,8 @@ class MyVerifier extends BareboneVerifier {
         |""".stripMargin
 
     // write program to a temporary file (name will be an auto-generated variant of the first parameter string)
-    val tmp = new File("mytempfile.smt2")
-    // TODO delete the line above and uncomment the lines below
-    //val tmp = File.createTempFile("mytempfile", ".smt2")
-    //tmp.deleteOnExit()
+    val tmp = File.createTempFile("mytempfile", ".smt2")
+    tmp.deleteOnExit()
     val stream = new BufferedOutputStream(new FileOutputStream(tmp))
     val inputString : String = smtPrelude + declarations + query
 

@@ -3,7 +3,7 @@ package core
 import smtlib.parser.Commands._
 import smtlib.parser.Terms._
 import util.ViperToSmtlibUtils
-import viper.silver.ast.{Bool, Domain, DomainFunc, DomainType, Int, LocalVarDecl, Program, Type}
+import viper.silver.ast.{Domain, DomainFunc, LocalVarDecl, Program}
 
 /**
   * Created by jan on 08.04.17.
@@ -11,19 +11,13 @@ import viper.silver.ast.{Bool, Domain, DomainFunc, DomainType, Int, LocalVarDecl
 object DeclarationCollector {
 
   def collectDeclarations(program: Program, locals: Seq[LocalVarDecl]): Seq[Command] = {
-    collectDatatypeDeclarations(program.domains) ++
+    collectSortDeclarations(program.domains) ++
       collectMethodLocalDeclarations(locals)
   }
 
-  private def collectDatatypeDeclarations(domains: Seq[Domain]): Seq[Command] = {
-    // TODO what exactly else do we need to support here? -> check what viper can do and the project descr.
-    var commands = Seq[Command]()
-    commands = commands :+
-      DeclareDatatypes(domains.map(d =>
-        (SSymbol(d.name), Seq(Constructor(SSymbol(d.name), Seq())))
-      ))
-    domains.foreach(d => commands = commands ++ collectFunctions(d.functions))
-    commands
+  private def collectSortDeclarations(domains: Seq[Domain]): Seq[Command] = {
+    domains.map(d => DeclareSort(SSymbol(d.name), 0)) ++
+      domains.flatMap(d => collectFunctions(d.functions))
   }
 
   private def collectFunctions(functions: Seq[DomainFunc]): Seq[Command] = {
@@ -41,12 +35,9 @@ object DeclarationCollector {
   }
 
   def collectAxioms(domains: Seq[Domain]): Seq[Term] = {
-    // in case there are no axioms we just use (and true true)
-    var axioms = Seq[Term]()
-    domains.foreach(d => d.axioms.foreach(a => {
-      axioms = axioms :+ ViperToSmtlibUtils.toTerm(a.exp)
-    }))
-    axioms
+    domains.flatMap(d =>
+      d.axioms.map(a => ViperToSmtlibUtils.toTerm(a.exp))
+    )
   }
 
 }

@@ -24,7 +24,7 @@ class WlpStarTest extends FunSuite {
 
   test ("dummy") {
     // paste the file-name here
-    val f = "simple-amfc-1.vpr"
+    val f = "simpleAxiomNegative-amfc-2.vpr"
 
     val args: Array[String] = Array(dir + f)
     TestingFrontend.execute(args)
