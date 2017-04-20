@@ -17,7 +17,9 @@ object WlpStar {
     stmt match {
       case s@Seqn(ss) =>
         val ssFiltered = ss.filter(s => !s.isInstanceOf[Seqn])
-        if (ssFiltered.size == 1) {
+        if (ssFiltered.isEmpty) {
+          Set(VerificationCondition(null, null, True()))
+        } else if (ssFiltered.size == 1) {
           wlpStar(ssFiltered.head, delta)
         } else {
           wlpStar(ssFiltered.head, wlpStar(Seqn(ssFiltered.tail)(s.pos, s.info), delta))

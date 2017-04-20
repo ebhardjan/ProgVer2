@@ -1,0 +1,4 @@
+// tests if we handle methods that have no content at all correctly
+// expected assertion-might-fail-count: 0
+method comparisons() {
+}
