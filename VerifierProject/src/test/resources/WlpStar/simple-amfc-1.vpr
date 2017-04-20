@@ -1,5 +1,5 @@
 // Just a very basic test
-// expected assertion might fail count
+// expected assertion might fail count: 1
 
 method test() {
     var a: Int
