@@ -86,7 +86,8 @@ class MyVerifier extends BareboneVerifier {
         println("Transformed method:\n" + method + "\n")
       }
 
-      val declarations = DeclarationCollector.collectDeclarations(method.locals)
+      val declarations = DeclarationCollector.collectDeclarations(method.locals ++ method.formalArgs ++
+                                                                  method.formalReturns)
       val declarationsString = SmtLibUtils.declarationString(declarations)
       val verificationConditions: Set[VerificationCondition] = WlpStar.wlpStar(method.body, Set())
 

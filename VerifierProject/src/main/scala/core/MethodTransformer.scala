@@ -94,14 +94,23 @@ class MethodTransformer {
   /** Add all declared variables in method to the name generator.
     */
   private def addDeclaredVarsToNameGenerator(method: sil.Method): Seq[sil.LocalVarDecl] = {
-    addDeclaredVarsToNameGenerator(method.formalArgs)
-    addDeclaredVarsToNameGenerator(method.formalReturns)
+    addUnversionedVarsToNameGenerator(method.formalArgs)
+    addUnversionedVarsToNameGenerator(method.formalReturns)
     addDeclaredVarsToNameGenerator(method.locals)
     val bodyDecls = collectLocalVarsDeclared(method.body).toSeq
     addDeclaredVarsToNameGenerator(bodyDecls)
 
     method.formalArgs ++ method.formalReturns ++ method.locals ++ bodyDecls
   }
+
+  /** Add all variable names in the input Seq to the name generator as unversioned variables.
+    */
+  private def addUnversionedVarsToNameGenerator(varDecls: Seq[sil.LocalVarDecl]): Unit = {
+    for (varDecl <- varDecls) {
+      nameGenerator.putUnversionedVariable(varDecl.name)
+    }
+  }
+
   /** Add all variable names in the input Seq to the name generator.
     */
   private def addDeclaredVarsToNameGenerator(varDecls: Seq[sil.LocalVarDecl]): Unit = {
@@ -231,7 +240,7 @@ class MethodTransformer {
   /** Take a method and put the preconditions into the body as assume statements.
     */
   private def addPreConditions(method: sil.Method): sil.Method = {
-    val preconds: Seq[sil.Exp] = for (cond <- method.pres) yield replaceLocalVarWithVersion(cond, 0)
+    val preconds: Seq[sil.Exp] = for (cond <- method.pres) yield replaceLocalVarWithVersion(cond)
     val result = method
     result.body = sil.Seqn(preconds.map(exp => sil.Inhale(exp)()) :+ method.body)()
     result
