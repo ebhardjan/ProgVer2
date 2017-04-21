@@ -12,6 +12,7 @@ class DSANameGenerator {
   val separator = "_"
   private val identCounts: mutable.HashMap[String, Int] = mutable.HashMap[String, Int]()
   private val identMaxCounts: mutable.HashMap[String, Int] = mutable.HashMap[String, Int]()
+  private val unversionedVariables: mutable.Set[String] = mutable.Set[String]()
 
   /** Get the latest version number of a variable. Return -1 if the variable has not been used before.
     */
@@ -26,6 +27,10 @@ class DSANameGenerator {
     identCounts.put(name, version)
     val maxCount = identMaxCounts.getOrElse(name, -1)
     if (maxCount < version) identMaxCounts.put(name, version)
+  }
+
+  def putUnversionedVariable(variable: String): Unit = {
+    unversionedVariables.add(variable)
   }
 
   /** Update all versions in the given map to the value they map to.
@@ -76,7 +81,11 @@ class DSANameGenerator {
     if (lastCount >= 0) {
       makeIdentifier(name, lastCount)
     } else {
-      throw new Exception(s"Identifier $name has not been created yet.")
+      if (unversionedVariables.contains(name)) {
+        name
+      } else {
+        throw new Exception(s"Identifier $name has not been created yet.")
+      }
     }
   }
 

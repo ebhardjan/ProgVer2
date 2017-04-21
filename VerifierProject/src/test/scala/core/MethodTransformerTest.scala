@@ -90,6 +90,17 @@ class MethodTransformerTest extends FunSuite with BeforeAndAfter {
   }
 
   test("while loop simple") {
+    /*
+    method foo()
+      invariant x >= 0
+    {
+      var x: Int = 0
+      while (x > 0) {
+        x = x - 1
+      }
+      assert x == 0
+    }
+     */
     val xGt0: Exp = GtCmp(LocalVar("x")(Int), IntLit(0)())()
     val dsaXGt0: Exp = GtCmp(LocalVar("x_1")(Int), IntLit(0)())()
     val inv: Seq[Exp] = Seq(GeCmp(LocalVar("x")(Int), IntLit(0)())())
