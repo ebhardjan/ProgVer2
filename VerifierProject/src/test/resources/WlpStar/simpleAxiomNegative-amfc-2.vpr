@@ -1,0 +1,25 @@
+// Simple example with axioms (negative) that is somewhat similar to lecture-pairs.vpr
+// expected assertion might fail count: 2
+domain IntPair {
+    function pair(i: Int, j:Int) : IntPair
+    function fst(p: IntPair) : Int
+    function snd(p: IntPair) : Int
+
+    axiom fst_def {
+        forall i:Int, j:Int :: {pair(i, j)} fst(pair(i, j)) == i
+    }
+
+    axiom inverse {
+        forall p: IntPair :: {snd(p)} {fst(p)} pair(fst(p), snd(p)) == p
+    }
+}
+
+method fst_def_test() {
+    assert fst(pair(1, 2)) == 2
+}
+
+method inverse_test() {
+    var p: IntPair
+    p := pair(1, 2)
+    assert pair(snd(p), fst(p)) == p
+}

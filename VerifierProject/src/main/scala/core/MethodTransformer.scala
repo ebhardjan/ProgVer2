@@ -1,7 +1,7 @@
 package core
 
 import util.DSANameGenerator
-import viper.silver.ast.{Exp, Inhale, LocalVar}
+import viper.silver.ast.{Exists, Exp, Forall, Inhale, LocalVar}
 import viper.silver.{ast => sil}
 
 import scala.collection.mutable
@@ -80,15 +80,19 @@ class MethodTransformer {
   /** Replace every local variable in the Exp with a new one, renamed to use the last written version of DSA
     */
   private def replaceLocalVarWithVersion(exp: sil.Exp, version: Int = -1): sil.Exp = {
-    val pre: PartialFunction[sil.Node, sil.Node] = {
-      case n: LocalVar =>
+    if (exp.isInstanceOf[Forall] || exp.isInstanceOf[Exists]) {
+      exp
+    } else {
+      val pre: PartialFunction[sil.Node, sil.Node] = {
+        case n: LocalVar =>
         if (version < 0) {
           renameLocalVarLast(n)
         } else {
           sil.LocalVar(nameGenerator.makeIdentifier(n.name, version))(n.typ)
         }
+      }
+      exp.transform(pre)()
     }
-    exp.transform(pre)()
   }
 
   /** Add all declared variables in method to the name generator.

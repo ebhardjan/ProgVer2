@@ -4,8 +4,8 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 
 import smtlib.parser.Commands._
 import smtlib.parser.CommandsResponses._
+import smtlib.parser.Terms.Term
 import smtlib.theories.Core._
-import util.SmtLibUtils
 import viper.silver.frontend.SilFrontend
 import viper.silver.verifier.errors._
 import viper.silver.verifier.reasons._
@@ -86,14 +86,15 @@ class MyVerifier extends BareboneVerifier {
         println("Transformed method:\n" + method + "\n")
       }
 
-      val declarations = DeclarationCollector.collectDeclarations(method.locals ++ method.formalArgs ++
+      val declarations = DeclarationCollector.collectDeclarations(program, method.locals ++ method.formalArgs ++
                                                                   method.formalReturns)
-      val declarationsString = SmtLibUtils.declarationString(declarations)
+      //val declarationsString = SmtLibUtils.declarationString(declarations)
       val verificationConditions: Set[VerificationCondition] = WlpStar.wlpStar(method.body, Set())
+      val axioms = DeclarationCollector.collectAxioms(program.domains)
 
       failures = failures ++
         verificationConditions.foldLeft[Seq[VerificationError]](Seq())((acc, validationCondition) => {
-          val failure: Option[VerificationError] = hasFailure(validationCondition, declarationsString, program)
+          val failure: Option[VerificationError] = hasFailure(validationCondition, declarations, axioms, program)
           if (failure.nonEmpty) {
             acc :+ failure.get
           } else {
@@ -113,18 +114,18 @@ class MyVerifier extends BareboneVerifier {
     * checks if a verification condition is violated -> we have an assertion that might fail
     *
     * @param verificationCondition condition that we want to check
-    * @param declarations the declarations-string of variables of the current method (in smt2 format)
-    * @param program the whole program, used in case of an internal error
+    * @param declarations          the declaration of local variables, data-types, functions etc.
+    * @param axioms                term that represents the axioms of a domain
+    * @param program               the whole program, used in case of an internal error
     * @return
     */
   private def hasFailure(verificationCondition: VerificationCondition,
-                          declarations: String,
+                          declarations: Seq[Command],
+                          axioms: Seq[Term],
                           program: sil.Program): Option[VerificationError] = {
     // solving the smt2 formula with z3
-    // TODO is this where the axioms will be???
-    val preconditions = True()
-    val query = Assert(Implies(preconditions, Not(verificationCondition.formula))) :: CheckSat() :: List()
-    val z3Response = validateWithZ3(declarations, query.mkString)
+    val query = axioms.map(a => Assert(a)) ++ (Assert(Not(verificationCondition.formula)) :: CheckSat() :: List())
+    val z3Response = validateWithZ3(declarations.mkString, query.mkString)
     z3Response match {
       case CheckSatStatus(SatStatus) | CheckSatStatus(UnknownStatus) =>
         Some(AssertFailed(verificationCondition.assert, AssertionFalse(verificationCondition.exp)))

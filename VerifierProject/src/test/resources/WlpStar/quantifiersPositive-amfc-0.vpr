@@ -1,0 +1,15 @@
+method positiveForall() {
+    assert forall i: Int :: i <= 0 || i > 0
+}
+
+method positiveForall2() {
+    assert forall i: Int, j: Int :: i + j == i + j
+}
+
+method positiveExists() {
+    assert exists i: Int :: i > 0
+}
+
+method positiveExists2() {
+    assert exists i: Int, j: Int :: i + j > 0
+}

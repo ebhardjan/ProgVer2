@@ -22,4 +22,18 @@ class WlpStarTest extends FunSuite {
     }
   }
 
+  test ("dummy") {
+    // paste the file-name here
+    val f = "simpleAxiomNegative-amfc-2.vpr"
+
+    val args: Array[String] = Array(dir + f)
+    TestingFrontend.execute(args)
+    val res = TestingFrontend.getResult
+
+    val mightFailCount: Int = (for (m <- fileRegex.findFirstMatchIn(f)) yield m.group(1)).get.toInt
+
+    TestUtils.assertAssertionMightFail(res, mightFailCount)
+  }
+
 }
+

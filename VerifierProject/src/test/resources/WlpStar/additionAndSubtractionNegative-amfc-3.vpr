@@ -1,6 +1,6 @@
 // tests weather we handle addition and subtraction correctly (negative case)
 // expected assertion-might-fail-count: 3
-method additionAndSubtraction() {
+method addition() {
     var a: Int
     var b: Int
     var c: Int
@@ -9,9 +9,22 @@ method additionAndSubtraction() {
 
     assume b == a + 2
     assert b == 3
+}
 
-    assume c == 2 - a
-    assert c == 1
+method subtraction() {
+    var a: Int
+    var b: Int
+
+    assume a == 2
+    assume b == 2 - a
+
+    assert b == 1
+}
+
+method negation() {
+    var a: Int
+
+    assume a == 2
 
     assert -a == 1
 }

@@ -1,0 +1,20 @@
+domain IntPair {
+  function pair(i: Int, j:Int) : IntPair
+  function fst(p: IntPair) : Int
+  function snd(p: IntPair) : Int
+
+  axiom fst_def {
+      forall i:Int, j:Int :: {pair(i,j)} fst(pair(i,j)) == i
+  }
+  axiom snd_def {
+      forall i:Int, j:Int :: {pair(i,j)} snd(pair(i,j)) == j
+  }
+  axiom inverse {
+      // the trigger is not sufficient to proof the property
+      forall p: IntPair :: {pair(fst(p), fst(p))} pair(fst(p),snd(p)) == p
+  }
+}
+
+method test() {
+    assert forall p:IntPair, q:IntPair :: fst(p) == fst(q) && snd(p) == snd(q) ==> p==q
+}
