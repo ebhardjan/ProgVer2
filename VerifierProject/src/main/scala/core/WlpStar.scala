@@ -5,6 +5,7 @@ import smtlib.theories.Core
 import smtlib.theories.Core._
 import util.ViperToSmtlibUtils
 import viper.silver.ast._
+import viper.silver.verifier.AbstractVerificationError
 
 /**
   * Created by jan on 07.04.17.
@@ -16,17 +17,17 @@ object WlpStar {
       case s@Seqn(ss) =>
         val ssFiltered = ss.filter(s => !s.isInstanceOf[Seqn])
         if (ssFiltered.isEmpty) {
-          Set(VerificationCondition(null, null, True()))
+          Set(VerificationCondition(null, True()))
         } else if (ssFiltered.size == 1) {
           wlpStar(ssFiltered.head, delta)
         } else {
           wlpStar(ssFiltered.head, wlpStar(Seqn(ssFiltered.tail)(s.pos, s.info), delta))
         }
       case a@Assert(e) =>
-        delta + VerificationCondition(a, e, ViperToSmtlibUtils.toTerm(e))
+        delta + VerificationCondition(a.info.asInstanceOf[CustomError].error, ViperToSmtlibUtils.toTerm(e))
       case Inhale(exp) =>
         val a1 = ViperToSmtlibUtils.toTerm(exp)
-        delta.map(a => VerificationCondition(a.assert, a.exp, Core.Implies(a1, a.formula)))
+        delta.map(a => VerificationCondition(a.error, Core.Implies(a1, a.formula)))
       case NonDeterministicChoice(s1, s2) =>
         wlpStar(s1, delta) ++ wlpStar(s2, delta)
     }
@@ -34,8 +35,4 @@ object WlpStar {
 
 }
 
-case class VerificationCondition(var assert: Assert, var exp: Exp, var formula: Term) {
-  override def toString: String = {
-    f"VerCond($assert, $exp, $formula)"
-  }
-}
+case class VerificationCondition(error: AbstractVerificationError, formula: Term) {}
