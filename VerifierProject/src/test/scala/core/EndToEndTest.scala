@@ -3,14 +3,14 @@ package core
 import org.scalatest.FunSuite
 
 /**
-  * Created by jan on 07.04.17.
+  * Created by jan on 21.04.17.
   */
-class WlpStarTest extends FunSuite {
+class EndToEndTest extends FunSuite {
 
-  val dir = "src/test/resources/WlpStar/"
+  val dir = "src/test/resources/EndToEnd/"
 
   for (f <- TestUtils.getListOfVprFiles(dir)) {
-    test("WlpStarTest-" + f) {
+    test("EndToEndTest-" + f) {
       TestUtils.runTest(dir, f)
     }
   }
@@ -18,7 +18,7 @@ class WlpStarTest extends FunSuite {
   // for debugging purposes...
   ignore("dummy") {
     // paste the file-name here
-    val f = "simple-amfc-1.vpr"
+    val f = "whileInvariantPreservedNegative-amfc-1.vpr"
 
     TestUtils.runTest(dir, f)
   }

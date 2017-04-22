@@ -2,6 +2,8 @@ package core
 
 import util.DSANameGenerator
 import viper.silver.ast.{Exists, Exp, Forall, Inhale, LocalVar}
+import viper.silver.verifier.errors.{LoopInvariantNotEstablished, LoopInvariantNotPreserved}
+import viper.silver.verifier.reasons.AssertionFalse
 import viper.silver.{ast => sil}
 
 import scala.collection.mutable
@@ -216,30 +218,50 @@ class MethodTransformer {
   /** Do the transformation on a [[sil.While]] loop.
     */
   private def transformWhileStmt(whilestmt: sil.While): sil.Node = {
-    val invariant: sil.Exp = unflattenAnd(whilestmt.invs)
-    val dsaInvariantBefore: sil.Exp = transformToDSA(invariant)
+    val dsaInvariantAssertsBefore: Seq[sil.Assert] = whilestmt.invs
+      .map(i => transformToDSA(i))
+      .map(i => sil.Assert(i)(i.pos, createInvariantNotEstablishedError(i)))
+
     // simulate havocs by increasing the version of all variables assigned in the loop beforehand
     val varsAssignedInBody: Set[String] = collectLocalVarsAssigned(whilestmt.body).keys
       .map(lv => lv.name).toSet -- whilestmt.locals.map(lvd => lvd.name)
     nameGenerator.increaseVersion(varsAssignedInBody)
-    val dsaInvariant: sil.Exp = transformToDSA(unflattenAnd(whilestmt.invs))
+
+    val dsaInvariants: Seq[sil.Exp] = whilestmt.invs.map(i => transformToDSA(i))
+    val dsaInvariantAsserts: Seq[sil.Assert] = dsaInvariants
+      .map(i => sil.Assert(i)(i.pos, createInvariantNotPreservedError(i)))
+
     val dsaCond: sil.Exp = transformToDSA(whilestmt.cond)
     val varVersionsAfterHavoc: Map[String, Int] = nameGenerator.variableMapSnapshot(varsAssignedInBody)
-    val result = sil.Seqn(Seq(
-      sil.Assert(dsaInvariantBefore)(),
-      sil.NonDeterministicChoice(
-        sil.Seqn(Seq(
-          sil.Inhale(sil.And(dsaInvariant, dsaCond)())(),
-          transformToDSA(whilestmt.body),
-          sil.Assert(dsaInvariant)(),
-          sil.Inhale(sil.BoolLit(false)())()
-        ))(),
-        sil.Inhale(sil.And(dsaInvariant, sil.Not(dsaCond)())())()
-      )()
-    ))()
+
+    val result = sil.Seqn(dsaInvariantAssertsBefore ++
+      Seq(
+        sil.NonDeterministicChoice(
+          sil.Seqn(
+            Seq(sil.Inhale(sil.And(unflattenAnd(dsaInvariants), dsaCond)())(),
+              transformToDSA(whilestmt.body))
+              ++ dsaInvariantAsserts
+              ++ Seq(sil.Inhale(sil.BoolLit(false)())())
+          )(),
+          sil.Inhale(sil.And(unflattenAnd(dsaInvariants), sil.Not(dsaCond)())())()
+        )()
+      ))()
     nameGenerator.bulkUpdateVersions(varVersionsAfterHavoc)
     result
   }
+
+  private def createInvariantNotEstablishedError(i: Exp): CustomError = {
+    val originalExpression = i.info.asInstanceOf[CustomError].expr
+    val error = LoopInvariantNotEstablished(originalExpression, AssertionFalse(originalExpression))
+    CustomError(error, originalExpression)
+  }
+
+  private def createInvariantNotPreservedError(i: Exp): CustomError = {
+    val originalExpression = i.info.asInstanceOf[CustomError].expr
+    val error = LoopInvariantNotPreserved(originalExpression, AssertionFalse(originalExpression))
+    CustomError(error, originalExpression)
+  }
+
 
   /** Take a method and put the preconditions into the body as assume statements.
     */
@@ -255,7 +277,7 @@ class MethodTransformer {
   private def addPostConditions(method: sil.Method): sil.Method = {
     val postconds: Seq[sil.Exp] = for (cond <- method.posts) yield replaceLocalVarWithVersion(cond)
     val result = method
-    result.body = sil.Seqn(method.body +: postconds.map(exp => sil.Assert(exp)()))()
+    result.body = sil.Seqn(method.body +: postconds.map(exp => sil.Assert(exp)(exp.pos, exp.info)))()
     result
   }
 

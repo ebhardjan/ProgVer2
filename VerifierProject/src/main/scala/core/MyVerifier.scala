@@ -80,7 +80,8 @@ class MyVerifier extends BareboneVerifier {
     var failures: Seq[VerificationError] = Seq()
     program.methods.foreach(m => {
       // reduction to smt2 formula
-      val method = transformer.transform(m)
+      val methodWithInfo = ErrorCreator.addInfoToNodes(m)
+      val method = transformer.transform(methodWithInfo)
 
       if (config.printTransformed.getOrElse(false)) {
         println("Transformed method:\n" + method + "\n")
@@ -128,7 +129,7 @@ class MyVerifier extends BareboneVerifier {
     val z3Response = validateWithZ3(declarations.mkString, query.mkString)
     z3Response match {
       case CheckSatStatus(SatStatus) | CheckSatStatus(UnknownStatus) =>
-        Some(AssertFailed(verificationCondition.assert, AssertionFalse(verificationCondition.exp)))
+        Some(verificationCondition.error)
       case CheckSatStatus(UnsatStatus) =>
         None
       case res@_ =>

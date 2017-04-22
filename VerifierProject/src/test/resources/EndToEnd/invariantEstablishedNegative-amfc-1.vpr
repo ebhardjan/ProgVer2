@@ -1,0 +1,9 @@
+method test() {
+    var x: Int := 10
+
+    while(x>0)
+        invariant x < 0
+    {
+        x := x - 1
+    }
+}

@@ -1,0 +1,5 @@
+method test() returns (a: Int)
+    ensures a >= 0
+{
+    a := -1
+}

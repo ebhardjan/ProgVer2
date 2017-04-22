@@ -3,8 +3,7 @@ package core
 import java.io.File
 
 import viper.silver.frontend.SilFrontend
-import viper.silver.verifier.errors.AssertFailed
-import viper.silver.verifier.{Failure, Success, VerificationResult}
+import viper.silver.verifier.{AbstractVerificationError, Failure, Success, VerificationResult}
 
 /**
   * Created by jan on 07.04.17.
@@ -35,7 +34,7 @@ object TestUtils {
   def assertAssertionMightFail(verificationResult: VerificationResult, failedAssertionCount: Int): Unit = {
     verificationResult match {
       case Failure(errors) =>
-        val actualCount = errors.count(e => e.isInstanceOf[AssertFailed])
+        val actualCount = errors.count(e => e.isInstanceOf[AbstractVerificationError])
         assert(actualCount == failedAssertionCount,
           s"might-fail assertion count should be $failedAssertionCount but was $actualCount")
       case Success =>
@@ -46,6 +45,24 @@ object TestUtils {
         }
       case _ => throw new RuntimeException("Unexpected verification result")
     }
+  }
+
+  val fileRegex = ".*-amfc-(\\d+).vpr".r
+
+  /**
+    * Runs a particular test and asserts that the correct number of "might-fails" are observed
+    *
+    * @param dir      the directory where the viper test file is located
+    * @param fileName the name of the viper test file
+    */
+  def runTest(dir: String, fileName: String): Unit = {
+    val args: Array[String] = Array(dir + fileName)
+    TestingFrontend.execute(args)
+    val res = TestingFrontend.getResult
+
+    val mightFailCount: Int = (for (m <- fileRegex.findFirstMatchIn(fileName)) yield m.group(1)).get.toInt
+
+    TestUtils.assertAssertionMightFail(res, mightFailCount)
   }
 
 }
