@@ -107,6 +107,6 @@ object ErrorCreator {
 
 case class CustomError(error: AbstractVerificationError, expr: Exp) extends Info {
 
-  override def comment: Seq[String] = Seq("we don't use this!")
+  override def comment: Seq[String] = Seq()
 
 }

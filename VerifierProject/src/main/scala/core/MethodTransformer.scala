@@ -226,26 +226,32 @@ class MethodTransformer {
     val varsAssignedInBody: Set[String] = collectLocalVarsAssigned(whilestmt.body).keys
       .map(lv => lv.name).toSet -- whilestmt.locals.map(lvd => lvd.name)
     nameGenerator.increaseVersion(varsAssignedInBody)
-
-    val dsaInvariants: Seq[sil.Exp] = whilestmt.invs.map(i => transformToDSA(i))
-    val dsaInvariantAsserts: Seq[sil.Assert] = dsaInvariants
-      .map(i => sil.Assert(i)(i.pos, createInvariantNotPreservedError(i)))
-
-    val dsaCond: sil.Exp = transformToDSA(whilestmt.cond)
     val varVersionsAfterHavoc: Map[String, Int] = nameGenerator.variableMapSnapshot(varsAssignedInBody)
+
+    // transform invariants, condition and body to DSA, using havoced versions
+    val dsaInvariants: Seq[sil.Exp] = whilestmt.invs.map(i => transformToDSA(i))
+    val dsaCond: sil.Exp = transformToDSA(whilestmt.cond)
+
+    val dsaBody: sil.Stmt = transformToDSA(whilestmt.body)
+    // transform invariants again to use latest versions to verify invariants after the body
+    val dsaInvariantsAssertsAfter: Seq[sil.Assert] = whilestmt.invs
+      .map(i => transformToDSA(i))
+      .map(i => sil.Assert(i)(i.pos, createInvariantNotPreservedError(i)))
 
     val result = sil.Seqn(dsaInvariantAssertsBefore ++
       Seq(
         sil.NonDeterministicChoice(
           sil.Seqn(
             Seq(sil.Inhale(sil.And(unflattenAnd(dsaInvariants), dsaCond)())(),
-              transformToDSA(whilestmt.body))
-              ++ dsaInvariantAsserts
+              dsaBody)
+              ++ dsaInvariantsAssertsAfter
               ++ Seq(sil.Inhale(sil.BoolLit(false)())())
           )(),
           sil.Inhale(sil.And(unflattenAnd(dsaInvariants), sil.Not(dsaCond)())())()
         )()
       ))()
+    // reset variables which were assigned in the loop to their versions after the havocs,
+    // because the traces executing the body don't survive
     nameGenerator.bulkUpdateVersions(varVersionsAfterHavoc)
     result
   }
