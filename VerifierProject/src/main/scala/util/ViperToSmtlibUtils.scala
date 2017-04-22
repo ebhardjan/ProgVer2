@@ -88,15 +88,18 @@ object ViperToSmtlibUtils {
 
       case ast.Forall(vars, triggers, body) =>
         Terms.Forall(sortedVar(vars.head), vars.tail.map(v => sortedVar(v)), addTriggers(toTerm(body), triggers))
-
       case ast.Exists(vars, body) =>
         Terms.Exists(sortedVar(vars.head), vars.tail.map(v => sortedVar(v)), toTerm(body))
+
       case ast.DomainFuncApp(name, args, _) =>
         if (args.isEmpty) {
           qualifiedIdentifier(name)
         } else {
           Terms.FunctionApplication(qualifiedIdentifier(name), args.map(a => toTerm(a)))
         }
+
+      case ast.CondExp(cond, thn, els) =>
+        ITE(toTerm(cond), toTerm(thn), toTerm(els))
     }
   }
 
