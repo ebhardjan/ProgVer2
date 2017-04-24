@@ -15,13 +15,12 @@ object WlpStar {
   def wlpStar(stmt: Stmt, delta: Set[VerificationCondition]): Set[VerificationCondition] = {
     stmt match {
       case s@Seqn(ss) =>
-        val ssFiltered = ss.filter(s => !s.isInstanceOf[Seqn])
-        if (ssFiltered.isEmpty) {
+        if (ss.isEmpty) {
           Set(VerificationCondition(null, True()))
-        } else if (ssFiltered.size == 1) {
-          wlpStar(ssFiltered.head, delta)
+        } else if (ss.size == 1) {
+          wlpStar(ss.head, delta)
         } else {
-          wlpStar(ssFiltered.head, wlpStar(Seqn(ssFiltered.tail)(s.pos, s.info), delta))
+          wlpStar(ss.head, wlpStar(Seqn(ss.tail)(s.pos, s.info), delta))
         }
       case a@Assert(e) =>
         delta + VerificationCondition(a.info.asInstanceOf[CustomError].error, ViperToSmtlibUtils.toTerm(e))
