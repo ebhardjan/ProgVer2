@@ -1,0 +1,9 @@
+method test() returns (a: Int)
+    ensures a == 10
+{
+    var i:Int := 0
+    while(i < 10) {
+        a := 10
+        i := i + 1
+    }
+}
