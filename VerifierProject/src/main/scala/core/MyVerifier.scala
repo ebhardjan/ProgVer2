@@ -165,6 +165,7 @@ class MyVerifier extends BareboneVerifier {
         |(set-option :smt.QI.EAGER_THRESHOLD 100)
         |(set-option :TYPE_CHECK true)
         |(set-option :smt.BV.REFLECT true)
+        |(set-option :timeout 10000)
         |; done setting options
         |
         |""".stripMargin
