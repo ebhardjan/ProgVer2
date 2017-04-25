@@ -93,14 +93,18 @@ object ViperToSmtlibUtils {
 
       case ast.DomainFuncApp(name, args, _) =>
         if (args.isEmpty) {
-          qualifiedIdentifier(name)
+          qualifiedIdentifier(prefixFuncName(name))
         } else {
-          Terms.FunctionApplication(qualifiedIdentifier(name), args.map(a => toTerm(a)))
+          Terms.FunctionApplication(qualifiedIdentifier(prefixFuncName(name)), args.map(a => toTerm(a)))
         }
 
       case ast.CondExp(cond, thn, els) =>
         ITE(toTerm(cond), toTerm(thn), toTerm(els))
     }
+  }
+
+  def prefixFuncName(name: String): String = {
+    "my_" + name
   }
 
   def sortedVar(localVarDecl: LocalVarDecl): SortedVar = {

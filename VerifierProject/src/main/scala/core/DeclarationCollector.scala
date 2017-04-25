@@ -23,7 +23,7 @@ object DeclarationCollector {
   private def collectFunctions(functions: Seq[DomainFunc]): Seq[Command] = {
     functions.map(f =>
       DeclareFun(
-        SSymbol(f.name),
+        SSymbol(ViperToSmtlibUtils.prefixFuncName(f.name)),
         f.formalArgs.map(a => ViperToSmtlibUtils.toSort(a.typ)),
         ViperToSmtlibUtils.toSort(f.typ)
       )
