@@ -81,19 +81,28 @@ class MethodTransformer {
 
   /** Replace every local variable in the Exp with a new one, renamed to use the last written version of DSA
     */
-  private def replaceLocalVarWithVersion(exp: sil.Exp, version: Int = -1): sil.Exp = {
-    if (exp.isInstanceOf[Forall] || exp.isInstanceOf[Exists]) {
-      exp
-    } else {
-      val pre: PartialFunction[sil.Node, sil.Node] = {
-        case n: LocalVar =>
-        if (version < 0) {
-          renameLocalVarLast(n)
-        } else {
-          sil.LocalVar(nameGenerator.makeIdentifier(n.name, version))(n.typ)
+  private def replaceLocalVarWithLast(exp: sil.Exp, exceptions: Seq[String] = Seq()): sil.Exp = {
+    exp match {
+      case f @ sil.Forall(variables, triggers: Seq[sil.Trigger], e) =>
+        val excepts: Seq[String] = variables.map(d => d.name)
+        val newTriggers: Seq[sil.Trigger] = triggers.map(t =>
+          sil.Trigger(t.exps.map(trigE => replaceLocalVarWithLast(trigE, excepts)))(t.pos, t.info))
+        sil.Forall(variables,
+          newTriggers,
+          replaceLocalVarWithLast(e, excepts))(f.pos, f.info)
+      case ex @ sil.Exists(variables, e) =>
+        val excepts: Seq[String] = variables.map(d => d.name)
+        sil.Exists(variables, replaceLocalVarWithLast(e, excepts))(ex.pos, ex.info)
+      case _ =>
+        val pre: PartialFunction[sil.Node, sil.Node] = {
+          case n: sil.LocalVar =>
+            if (exceptions.contains(n.name)) {
+              n
+            } else {
+              renameLocalVarLast(n)
+            }
         }
-      }
-      exp.transform(pre)()
+        exp.transform(pre)()
     }
   }
 
@@ -101,7 +110,7 @@ class MethodTransformer {
     */
   private def addDeclaredVarsToNameGenerator(method: sil.Method): Seq[sil.LocalVarDecl] = {
     addUnversionedVarsToNameGenerator(method.formalArgs)
-    addUnversionedVarsToNameGenerator(method.formalReturns)
+    addDeclaredVarsToNameGenerator(method.formalReturns)
     addDeclaredVarsToNameGenerator(method.locals)
     val bodyDecls = collectLocalVarsDeclared(method.body).toSeq
     addDeclaredVarsToNameGenerator(bodyDecls)
@@ -174,7 +183,7 @@ class MethodTransformer {
   /** Do the DSA transformation on a single If stmt.
     */
   private def ifStmtToDSA(ifstmt: sil.If): sil.If = {
-    val dsaCond: Exp = replaceLocalVarWithVersion(ifstmt.cond)
+    val dsaCond: Exp = replaceLocalVarWithLast(ifstmt.cond)
     val assignedVarsThen: mutable.Map[LocalVar, Int] = collectLocalVarsAssigned(ifstmt.thn)
     val assignedVarsElse: mutable.Map[LocalVar, Int] = collectLocalVarsAssigned(ifstmt.els)
     val originalAssignments: Map[String, Int] =
@@ -272,7 +281,7 @@ class MethodTransformer {
   /** Take a method and put the preconditions into the body as assume statements.
     */
   private def addPreConditions(method: sil.Method): sil.Method = {
-    val preconds: Seq[sil.Exp] = for (cond <- method.pres) yield replaceLocalVarWithVersion(cond)
+    val preconds: Seq[sil.Exp] = for (cond <- method.pres) yield replaceLocalVarWithLast(cond)
     val result = method
     result.body = sil.Seqn(preconds.map(exp => sil.Inhale(exp)()) :+ method.body)()
     result
@@ -281,7 +290,7 @@ class MethodTransformer {
   /** Take a method and put the postconditions into the body as assert statements.
     */
   private def addPostConditions(method: sil.Method): sil.Method = {
-    val postconds: Seq[sil.Exp] = for (cond <- method.posts) yield replaceLocalVarWithVersion(cond)
+    val postconds: Seq[sil.Exp] = for (cond <- method.posts) yield replaceLocalVarWithLast(cond)
     val result = method
     result.body = sil.Seqn(method.body +: postconds.map(exp => sil.Assert(exp)(exp.pos, exp.info)))()
     result
@@ -292,9 +301,9 @@ class MethodTransformer {
   private def transformToDSA[A<:sil.Node](node: A): A = {
     val pre: PartialFunction[sil.Node, sil.Node] = {
       case n: sil.LocalVarAssign =>
-        val newRhs: sil.Exp = replaceLocalVarWithVersion(n.rhs)
+        val newRhs: sil.Exp = replaceLocalVarWithLast(n.rhs)
         sil.Inhale(sil.EqCmp(renameLocalVarUnique(n.lhs), newRhs)())()
-      case n: sil.Exp => replaceLocalVarWithVersion(n)
+      case n: sil.Exp => replaceLocalVarWithLast(n)
       case n: sil.If => ifStmtToDSA(n)
       case n: sil.While => transformWhileStmt(n)
     }
