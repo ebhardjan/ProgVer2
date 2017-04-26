@@ -75,7 +75,9 @@ object TestingFrontend extends SilFrontend {
   protected var verifierInstance: MyVerifier = _
 
   def createVerifier(fullCmd: String): MyVerifier = {
-    verifierInstance = new MyVerifier()
+    // we set the timeout to 20s -> the z3 smt solver will stop after about 5 seconds max
+    // so there won't be tests that run infinitely long
+    verifierInstance = new MyVerifier(timeout = 20000)
 
     verifierInstance
   }

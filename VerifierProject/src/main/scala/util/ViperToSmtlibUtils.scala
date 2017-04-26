@@ -86,8 +86,9 @@ object ViperToSmtlibUtils {
       case IntLit(i) =>
         NumeralLit(i)
 
-      case ast.Forall(vars, triggers, body) =>
-        Terms.Forall(sortedVar(vars.head), vars.tail.map(v => sortedVar(v)), addTriggers(toTerm(body), triggers))
+      case f@ast.Forall(vars, triggers, body) =>
+        Terms.Forall(sortedVar(vars.head),
+          vars.tail.map(v => sortedVar(v)), addTriggers(toTerm(body), triggers, f.autoTrigger.triggers))
       case ast.Exists(vars, body) =>
         Terms.Exists(sortedVar(vars.head), vars.tail.map(v => sortedVar(v)), toTerm(body))
 
@@ -111,11 +112,16 @@ object ViperToSmtlibUtils {
     SortedVar(SSymbol(localVarDecl.name), toSort(localVarDecl.typ))
   }
 
-  private def addTriggers(term: Term, triggers: Seq[Trigger]): Term = {
+  private def addTriggers(term: Term, triggers: Seq[Trigger], autoTriggers: Seq[Trigger]): Term = {
     if (triggers.nonEmpty) {
       Terms.AnnotatedTerm(term,
         triggerToAttribute(triggers.head),
         triggers.tail.map(t => triggerToAttribute(t))
+      )
+    } else if (autoTriggers.nonEmpty) {
+      Terms.AnnotatedTerm(term,
+        triggerToAttribute(autoTriggers.head),
+        autoTriggers.tail.map(t => triggerToAttribute(t))
       )
     } else {
       term

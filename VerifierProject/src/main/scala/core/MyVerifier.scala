@@ -51,7 +51,7 @@ object Main extends SilFrontend{ // "Sil" is an (old) name for the Viper interme
   }
 }
 
-class MyVerifier extends BareboneVerifier {
+class MyVerifier(timeout: Int = -1) extends BareboneVerifier {
   override def name: String = "MyVerifierName"
 
   /** Only needed if you want to do something special on (first) invocation of the verifier
@@ -147,7 +147,7 @@ class MyVerifier extends BareboneVerifier {
   private def validateWithZ3(declarations: String, query: String) = {
     // FIXME: ugly large method, nearly as ugly as the original verify method...
     // here is a reasonable initial configuration for z3. If you're interested, you can check out the options in the Z3 documentation (some are also visible from z3 /pd etc.)
-    val smtPrelude =
+    var smtPrelude =
       """
         |(set-option :print-success false)
         |(set-info :smt-lib-version 2.0)
@@ -165,10 +165,18 @@ class MyVerifier extends BareboneVerifier {
         |(set-option :smt.QI.EAGER_THRESHOLD 100)
         |(set-option :TYPE_CHECK true)
         |(set-option :smt.BV.REFLECT true)
-        |(set-option :timeout 10000)
+        |""".stripMargin
+    if (timeout > 0) {
+      smtPrelude = smtPrelude +
+        f"""
+           |(set-option :timeout $timeout)
+        """.stripMargin
+    }
+    smtPrelude = smtPrelude +
+      """
         |; done setting options
         |
-        |""".stripMargin
+                 """.stripMargin
 
     // write program to a temporary file (name will be an auto-generated variant of the first parameter string)
     val tmp = File.createTempFile("mytempfile", ".smt2")

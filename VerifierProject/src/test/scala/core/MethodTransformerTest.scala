@@ -9,13 +9,13 @@ import viper.silver.ast._
 class MethodTransformerTest extends FunSuite with BeforeAndAfter {
 
   var transformer: MethodTransformer = _
-  
-  def createDummyMethod(name: String, 
+
+  def createDummyMethod(name: String,
                         _body: Stmt,
-                        formalArgs: Seq[LocalVarDecl] = Seq(), 
-                        formalReturns: Seq[LocalVarDecl] = Seq(), 
-                        _pres: Seq[Exp] = Seq(), 
-                        _posts: Seq[Exp] = Seq(), 
+                        formalArgs: Seq[LocalVarDecl] = Seq(),
+                        formalReturns: Seq[LocalVarDecl] = Seq(),
+                        _pres: Seq[Exp] = Seq(),
+                        _posts: Seq[Exp] = Seq(),
                         _locals: Seq[LocalVarDecl] = Seq()
                        ): Method = {
     Method(name, formalArgs, formalReturns, _pres, _posts, _locals, _body)()
@@ -55,7 +55,7 @@ class MethodTransformerTest extends FunSuite with BeforeAndAfter {
     assert(transformedMeth == targetMeth, "should have converted Method correctly")
   }
 
-  test("if statement simple") {
+  ignore("if statement simple") {
     val initMeth = createDummyMethod("foo", Seqn(Seq(
       LocalVarAssign(LocalVar("x")(Int), IntLit(0)())(),
       If(EqCmp(LocalVar("x")(Int), IntLit(0)())(),
@@ -89,7 +89,7 @@ class MethodTransformerTest extends FunSuite with BeforeAndAfter {
     assert(transformedMeth == targetMeth, "should have converted if stmt correctly")
   }
 
-  test("while loop simple") {
+  ignore("while loop simple") {
     /*
     method foo()
       invariant x >= 0
