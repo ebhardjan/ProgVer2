@@ -5,7 +5,7 @@ method test() {
     if (x < 10) {
         var b: Bool
         x := 0
-        if (false) {
+        if (true) {
             x := 1
         }
     }
