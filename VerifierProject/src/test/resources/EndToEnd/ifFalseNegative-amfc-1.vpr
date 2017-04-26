@@ -1,0 +1,9 @@
+method test() {
+    var x: Int
+
+    x := 4
+    if (false) {
+        x := 1
+    }
+    assert x == 1
+}

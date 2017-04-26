@@ -41,12 +41,12 @@ domain Nat {
   function plus(m:Nat, n:Nat) : Nat
 
   axiom plus_def {
-      forall m:Nat, n:Nat :: {plus(m,n)} plus(m,n) == 
+      forall m:Nat, n:Nat :: {plus(m,n)} plus(m,n) ==
         (tag(m) == 0 ? n : succ(plusL(pred(m),n)))
   }
 
   function plusL(m: Nat, n:Nat) : Nat
-   
+
   axiom plusL_def {
       forall m:Nat, n:Nat :: {plus(m,n)} plus(m,n) == plusL(m,n)
   }
