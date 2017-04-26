@@ -1,0 +1,4 @@
+method test() {
+    var i: Int := 2
+    assert exists j: Int :: j > i
+}

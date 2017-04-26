@@ -1,0 +1,4 @@
+method test() {
+    var a:Int := 0
+    assert forall i:Int :: i < a || i > a || i == a
+}
