@@ -65,25 +65,3 @@ method testDataStructure() {
     assert lookup(s, 3) == 5
     assert lookup(s, 4) == 6
 }
-
-method sort() {
-    var s: Sequence := empty()
-    s := append(s,2)
-    s := append(s,1)
-    s := append(s,3)
-
-    assert !isSorted(s)
-
-    while(!isSorted(s)) {
-        var i: Int := 0
-        var l: Int := length(s)
-        while (i < l) {
-            if (lookup(s,i) > lookup(s,i+1)) {
-                
-
-            }
-
-        }
-
-    }
-}
