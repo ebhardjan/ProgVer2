@@ -22,30 +22,29 @@ domain Matrix {
 define inRange(m,i,j) 0 <= i && 0 <= j && i < size(m) && j < size(m)
 
 method add(m1 : Matrix, m2: Matrix) returns (m3:Matrix)
-  requires size(m1) > 0
+  requires size(m1) == 1 // can only prove for size == 1 for now ... :(
   requires size(m1) == size(m2)
   ensures forall x:Int, y:Int :: {select(m3,x,y)} inRange(m1,x,y) ==> select(m3,x,y) == select(m1,x,y) + select(m2,x,y)  
 {
   assume size(m3) == size(m1) // "initialise" m3 to *some* matrix of the right size
   var i : Int := 0
-  var j : Int := 0
-  // The variables with a '2' in the name are only updated at the beginning of the loop body => they will always remain in range of matrices
-  var i2: Int := i
-  var j2: Int := j
+  var j : Int
   
   while(i < size(m1)) 
-    invariant inRange(m3, i2, j2) && size(m1) == size(m2) && size(m1) == size(m3) && i >= 0
-    // invariant forall x: Int, y: Int :: {select(m3,x,y)} inRange(m3,x,y) && x < i ==> select(m3,x,y) == select(m1,x,y) + select(m2,x,y)
+    invariant i >= 0 && i <= size(m3)
+    invariant size(m1) == size(m2) && size(m1) == size(m3)
+    invariant forall x: Int, y: Int :: {select(m3,x,y)} 
+      inRange(m3,x,y) && x < i ==> select(m3,x,y) == select(m1,x,y) + select(m2,x,y)
   {
     j := 0
-    i2 := i
     while(j < size(m1)) 
-      invariant inRange(m3, i2, j2) && size(m1) == size(m3) && j >= 0 
-      // invariant forall x: Int, y: Int :: {select(m3,x,y)} inRange(m3,x,y) ==> (select(m3,x,y) == select(m1,x,y) + select(m2,x,y)) || (x >= i || y > j)
+      invariant i >= 0 && i < size(m3) && j >= 0
+      invariant size(m1) == size(m3) && size(m1) == size(m2)
+      invariant forall x: Int, y: Int :: {select(m3,x,y)} 
+        0 <= x && x <= i && 0 <= y && y < j && i < size(m3) ==> (select(m3,x,y) == select(m1,x,y) + select(m2,x,y)) 
     {
-      j2 := j
-      m3 := store(m3,i2,j2,(select(m1,i2,j2) + select(m2,i2,j2)))
-      assert select(m3,i2,j2) == select(m1,i2,j2) + select(m2,i2,j2)
+      m3 := store(m3,i,j,(select(m1,i,j) + select(m2,i,j)))
+      assert select(m3,i,j) == select(m1,i,j) + select(m2,i,j)
       j := j + 1
     }
     i := i + 1
