@@ -1,0 +1,57 @@
+domain Sequence {
+    function lookup(s:Sequence, i:Int) : Int
+    function length(s:Sequence) : Int
+    function append(s:Sequence, i:Int) : Sequence
+    function empty() : Sequence
+
+    axiom length_empty {
+        length(empty()) == 0
+    }
+    axiom length_append {
+        forall s:Sequence, i:Int :: {length(append(s,i))}
+        {length(s),append(s,i)}{length(s),append(s,i)}
+        length(append(s,i)) == length(s) + 1
+    }
+    axiom length_pos {
+        forall s:Sequence :: length(s) >= 0
+    }
+    axiom appendAndLookup {
+        forall s:Sequence, i:Int ::
+            {lookup(append(s, i),length(append(s, i)))}
+        lookup(append(s, i), length(append(s,i))) == i
+    }
+
+    axiom lookupRecursive {
+        forall s1:Sequence, s2:Sequence, i:Int, x:Int, y:Int ::
+            {lookup(s1, i)}
+            {lookup(append(s2, x), i)}
+        s1 == append(s2, x) && i == length(s1) - 1 ==> lookup(s1, i) == lookup(s2, length(s2))
+    }
+    /*
+    axiom lookupRecursivUnrolled1 {
+        forall s1:Sequence, s2:Sequence, i:Int, x:Int, y:Int ::
+            {lookup(s1, i)}
+        s1 == append(append(s2, x), y) && i == length(s1) - 2 ==> lookup(s1, i) == lookup(s2, length(s2))
+    }
+    */
+} 
+
+method testDataStructure() {
+    var s2: Sequence := empty()
+    assert lookup(append(s2, 1), length(append(s2, 1))) == 1
+
+    var s: Sequence := empty()
+    s := append(s, 1)
+    assert lookup(s, length(s)) == 1
+    s := append(s, 3)
+    assert lookup(s, length(s)) == 3
+    s := append(s, 5)
+    assert lookup(s, length(s)) == 5
+    s := append(s, 6)
+    assert lookup(s, length(s)) == 6
+
+    assert lookup(s, 1) == 1
+    assert lookup(s, 2) == 3
+    assert lookup(s, 3) == 5
+    assert lookup(s, 4) == 6
+}
