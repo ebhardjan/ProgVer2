@@ -16,7 +16,7 @@ object DeclarationCollector {
   }
 
   private def collectSortDeclarations(domains: Seq[Domain]): Seq[Command] = {
-    domains.map(d => DeclareSort(SSymbol(d.name), 0)) ++
+    domains.map(d => DeclareSort(SSymbol(ViperToSmtlibUtils.prefixSort(d.name)), 0)) ++
       domains.flatMap(d => collectFunctions(d.functions))
   }
 

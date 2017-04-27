@@ -23,9 +23,12 @@ object ViperToSmtlibUtils {
     typ match {
       case Int => Sort(SimpleIdentifier(SSymbol("Int")))
       case Bool => Sort(SimpleIdentifier(SSymbol("Bool")))
-      case dT: DomainType => Sort(SimpleIdentifier(SSymbol(dT.domainName)))
-      //TODO there are probably more here, like List and so on... built in types...
+      case dT: DomainType => Sort(SimpleIdentifier(SSymbol(prefixSort(dT.domainName))))
     }
+  }
+
+  def prefixSort(name: String): String = {
+    "myT_" + name
   }
 
   /**
