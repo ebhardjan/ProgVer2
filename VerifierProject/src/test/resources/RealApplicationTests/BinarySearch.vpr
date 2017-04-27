@@ -17,8 +17,7 @@ domain OrdSeq {
 method binary_search(s: OrdSeq, key: Int) returns (index: Int)
   ensures -1 <= index && index <= len(s)
   ensures index >= 0 ==> lookup(s, index) == key
-  ensures index == -1 ==> forall i: Int :: {lookup(s,i)} inRange(s,i) ==> lookup(s,i) != key
-
+  ensures index == -1 ==> (forall i: Int :: {lookup(s,i)} inRange(s,i) ==> lookup(s,i) != key)
 {
   var upper: Int := len(s)
   var lower: Int := 0
@@ -26,8 +25,7 @@ method binary_search(s: OrdSeq, key: Int) returns (index: Int)
   while (lower < upper && index == -1)
     invariant lower >= 0 && upper <= len(s) && lower <= upper
     invariant -1 <= index && index <= len(s)
-    invariant index == -1 ==> forall i: Int :: {lookup(s,i)} inRange(s,i) && i < lower && i >= upper ==> lookup(s,i) != key
-    // invariant index == -1 && lower >= upper ==> forall i: Int :: {lookup(s,i)} inRange(s,i) ==> lookup(s,i) != key
+    invariant index == -1 ==> forall i: Int :: {lookup(s,i)} inRange(s,i) && (i < lower || i >= upper) ==> lookup(s,i) != key
     invariant index >= 0 ==> lookup(s, index) == key
   {
     var middle: Int := (lower + upper) \ 2
@@ -36,7 +34,6 @@ method binary_search(s: OrdSeq, key: Int) returns (index: Int)
     } else {
       if (lookup(s, middle) == key) {
         index := middle
-        upper := middle
       } else { // lookup(s, middle) > key
         upper := middle
       }
