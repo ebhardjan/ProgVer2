@@ -1,0 +1,29 @@
+method test() {
+    var x: Int
+
+    x := 4
+    if (x < 10) {
+        var b: Bool
+        x := 0
+        if (false) {
+            x := 1
+        }
+    }
+    assert x == 1
+}
+
+method test2() {
+    var x: Int
+
+    x := 4
+    if (x > 10) {}
+    else {
+        var b: Bool
+        x := 0
+        if (false) {
+            x := 1
+        }
+    }
+    assert x == 1
+
+}

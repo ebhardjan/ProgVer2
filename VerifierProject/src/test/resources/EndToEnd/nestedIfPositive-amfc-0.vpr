@@ -1,0 +1,13 @@
+method test() {
+    var x: Int
+
+    x := 4
+    if (x < 10) {
+        var b: Bool
+        x := 0
+        if (true) {
+            x := 1
+        }
+    }
+    assert x == 1
+}

@@ -1,0 +1,160 @@
+define inRange(a, i) 0 < i && i <= length(a)
+define inRangeUpTo(a, i, k) 0 < i && i <= k && i <= length(a)
+domain Array {
+    function init(length: Int): Array
+    function lookup(a:Array, pos:Int): Int
+    function store(a:Array, pos:Int, val:Int): Array
+    function length(a:Array): Int
+
+    axiom initializedLengthHolds {
+        forall a:Array, i:Int :: {length(a)} a == init(i) ==> length(a) == i
+    }
+    axiom zeroInitialized {
+        forall a:Array, l:Int :: a == init(l) ==> (forall i:Int :: inRange(a, i) ==> lookup(a, i) == 0)
+    }
+    axiom storePreservesLength {
+        forall a:Array, i:Int, x:Int ::
+            {length(a)}
+        length(a) == length(store(a, i, x))
+    }
+    axiom storeAndLookup {
+        forall a:Array, i:Int, x:Int ::
+            {lookup(a, i)}
+        inRange(a, i) ==> lookup(store(a, i, x), i) == x
+    }
+    axiom storeOnlyChangesOne {
+        forall a:Array, i:Int, j:Int, x:Int ::
+            {lookup(a, j)}
+        inRange(a, i) && inRange(a, j) && i != j ==> lookup(store(a, i, x), j) == lookup(a, j)
+    }
+
+    function isSorted(a:Array):Bool
+    axiom sorted {
+        forall a:Array ::
+            {isSorted(a)}
+        (forall i:Int, k:Int :: inRange(a, i) && inRange(a, k) && i < k
+            ==> lookup(a, i) <= lookup(a, k)) ==> isSorted(a)
+    }
+
+    function isMinOf(a: Array, v:Int):Bool
+    axiom isMin {
+        forall a:Array, v:Int ::
+            {isMinOf(a,v)}
+        (forall i:Int :: (inRange(a, i) ==> lookup(a, i) >= v)) ==> isMinOf(a, v)
+    }
+} 
+
+method initTest() {
+    var a: Array := init(4)
+    assert length(a) == 4
+    assert lookup(a, 1) == 0
+    assert lookup(a, 2) == 0
+    assert lookup(a, 3) == 0
+    assert lookup(a, 4) == 0
+    assert length(a) == 4
+}
+
+method storeAndLookupTest() {
+    var a: Array := init(4)
+    a := store(a, 3, 100) 
+    a := store(a, 1, 300) 
+
+    assert inRange(a, 1)
+    assert length(a) == 4
+
+    assert lookup(a, 1) == 300
+    assert lookup(a, 3) == 100
+    assert length(a) == 4
+}
+
+method isSortedInitiallyTest() {
+    var a: Array := init(3)
+    assert isSorted(a)
+}
+
+method isSortedTest() {
+    var a: Array := init(3)
+    a := store(a, 1, 1)
+    a := store(a, 2, 5)
+    a := store(a, 3, 10)
+    assert isSorted(a)
+}
+
+/** negative test 
+method isNotSortedTest() {length(store(a, i, x)
+    var a: Array := init(3)
+    a := store(a, 1, 10)
+    a := store(a, 2, 9)
+    a := store(a, 3, 5)
+    assert isSorted(a)
+}
+*/
+
+method isMinOfTest() {
+    var a: Array := init(3)
+    a := store(a, 1, 3)
+    a := store(a, 2, 5)
+    a := store(a, 3, 1)
+    assert isMinOf(a, 1)
+}
+
+/** negative test 
+method isNotMinOfTest() {
+    var a: Array := init(3)
+    a := store(a, 1, 3)
+    a := store(a, 2, 5)
+    a := store(a, 3, 1)
+    assert isMinOf(a, 3)
+}
+*/
+
+method selectionSort()
+{
+    var a:Array := init(5)
+    a := store(a, 1, 3)
+    a := store(a, 2, 5)
+    a := store(a, 3, 1)
+    a := store(a, 4, 100)
+    a := store(a, 5, 101)
+    var i:Int := 1
+    var l:Int := length(a)
+    while (i <= l)
+        // everything before the ith element is sorted
+        invariant forall m:Int, n:Int :: inRangeUpTo(a, m, i-1) && inRangeUpTo(a, n, i-1) && m < n
+            ==> lookup(a, m) <= lookup(a, n)
+        // all elements after the ith element (including the ith) are larger than everything before the ith element
+        invariant forall m:Int, n:Int :: inRangeUpTo(a, m, i-1) && i <= n && n <= l ==> lookup(a, m) <= lookup(a, n)
+        // length of array is preserved
+        invariant length(a) == l
+    {
+        var j:Int := i
+        //var min:Int := lookup(a, i)
+        var minPos:Int := i
+        while (j <= l)
+            // everything before the ith element is sorted
+            invariant forall m:Int, n:Int :: inRangeUpTo(a, m, i-1) && inRangeUpTo(a, n, i-1) && m < n
+                ==> lookup(a, m) <= lookup(a, n)
+            // all elements after the ith element (including the ith) are larger than everything before the ith element
+            invariant forall m:Int, n:Int :: inRangeUpTo(a, m, i-1) && i <= n && n <= l ==> lookup(a, m) <= lookup(a, n)
+            // min is smallest element in what we already saw after the ith
+            invariant forall x:Int :: i <= x && x < j ==> lookup(a, minPos) <= lookup(a, x)
+            // length of array is preserved
+            invariant length(a) == l
+        {
+            var v:Int := lookup(a, j)
+            if (v < lookup(a, minPos)) {
+                minPos := j
+            }
+            j := j + 1
+        }
+        assert forall m:Int, n:Int :: inRangeUpTo(a, m, i-i) && inRangeUpTo(a, n, i-1) && m < n
+             ==> lookup(a, m) <= lookup(a, n)
+        var min:Int := lookup(a, minPos)
+        var tmp:Int := lookup(a, i)
+        assert length(a) == 5
+        a := store(a, minPos, tmp)
+        a := store(a, i, min)
+        i := i + 1
+    }
+    assert isSorted(a)
+}

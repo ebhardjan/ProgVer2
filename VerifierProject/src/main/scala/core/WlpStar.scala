@@ -16,7 +16,7 @@ object WlpStar {
     stmt match {
       case s@Seqn(ss) =>
         if (ss.isEmpty) {
-          Set(VerificationCondition(null, True()))
+          delta
         } else if (ss.size == 1) {
           wlpStar(ss.head, delta)
         } else {
