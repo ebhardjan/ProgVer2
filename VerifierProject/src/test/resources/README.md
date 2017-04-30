@@ -9,7 +9,7 @@ For the positive tests we want to have 0 assertions that might not hold and for 
 We encoded this information of how many assertions are expected to "might-fail" into the filenames.
 
 The filenames are of the form:
-```<somethingMeaningful>-amfc-<assertion-might-fail-count>.vpr```
+``<somethingMeaningful>-amfc-<assertion-might-fail-count>.vpr``
 
 Note: amfc stands for "assertion might fail count".
 
@@ -25,13 +25,13 @@ WlpStar
 -------
 
 Contains test cases (.vpr files) that already are in DSA and reduced to the four statements:
-* ```s1; s2```
-* ```s1 [] s2```
-* ```assume A```
-* ```assert A```
+* ``s1; s2``
+* ``s1 [] s2``
+* ``assume A``
+* ``assert A``
 
-The test-cases in this folder unit-test our ```wlp*``` function. They are very simple but ensure high line coverage in
-the ```WlpStar``` class as well as ```ViperToSmtlibUtils```.
+The test-cases in this folder unit-test our ``wlp*`` function. They are very simple but ensure high line coverage in
+the ``WlpStar`` class as well as ``ViperToSmtlibUtils``.
 We used those tests early on in the project when the DSA transformation and method transformation was not implemented
 yet.
 
@@ -40,7 +40,7 @@ EndToEnd
 
 Contains very simple test-cases that are mainly used to test the method transformation and DSA conversion but of course
 also run through our weakest liberal precondition code.
-The tests in this folder ensure a high line coverage in the ```MethodTransformer```.
+The tests in this folder ensure a high line coverage in the ``MethodTransformer``.
 
 ApplicationTests
 ----------------
@@ -48,6 +48,14 @@ ApplicationTests
 Contains test-cases that are actually some implementation of an algorithm or a simple data structure.
 
 //TODO list all the test cases here and bla bla...
-
-
-
+* ``BinarySearch.vpr``: Binary search on an ordered sequence. Borrows elements
+from the implementation on the Viper examples webpage.
+* ``BST.vpr``: An implementation of a binary search tree.
+* ``MatrixAddition.vpr``: The one we got with the code skeleton, unchanged.
+* ``MatrixAdditionImproved.vpr``: An attempt at fixing the code to make
+it verify. We managed for the assertion in the inner loop to verify,
+however the loop invariants and post-condition only verify for the additional
+constraint that the size of the matrices is 1 (making it rather
+uninteresting...).
+* ``SelectionSort.vpr``: //TODO
+* ``SimpleSequence.vpr``: //TODO
