@@ -5,12 +5,16 @@ import java.io.File
 import viper.silver.frontend.SilFrontend
 import viper.silver.verifier.{AbstractVerificationError, Failure, Success, VerificationResult}
 
+import scala.util.matching.Regex
+
 /**
   * Created by jan on 07.04.17.
   *
   * Testing utility methods
   */
 object TestUtils {
+
+  val fileRegex: Regex = ".*-amfc-(\\d+).vpr".r
 
   /**
     * Get a list of all the vpr files in a given directory
@@ -24,6 +28,25 @@ object TestUtils {
       directory.listFiles
         .filter(f => f.isFile)
         .filter(f => f.getName.contains(".vpr"))
+        .map(f => f.getName)
+        .toList
+    } else {
+      List()
+    }
+  }
+
+  /**
+    * Get a list of all the vpr files that match the might fail filname format in a given directory
+    *
+    * @param directoryPath directory where to look for vpr files
+    * @return list of paths of the vpr files
+    */
+  def getFilteredListOfVprFiles(directoryPath: String): List[String] = {
+    val directory = new File(directoryPath)
+    if (directory.exists && directory.isDirectory) {
+      directory.listFiles
+        .filter(f => f.isFile)
+        .filter(f => f.getName.matches(fileRegex.regex))
         .map(f => f.getName)
         .toList
     } else {
@@ -46,8 +69,6 @@ object TestUtils {
       case _ => throw new RuntimeException("Unexpected verification result")
     }
   }
-
-  val fileRegex = ".*-amfc-(\\d+).vpr".r
 
   /**
     * Runs a particular test and asserts that the correct number of "might-fails" are observed
