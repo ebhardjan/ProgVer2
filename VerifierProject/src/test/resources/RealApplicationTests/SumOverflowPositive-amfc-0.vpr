@@ -1,0 +1,15 @@
+method doSomeCalculationButDontOverflow(limit: Int) returns (accumulator:Int)
+    requires limit > 1
+    ensures accumulator <= limit
+{
+    accumulator := 1
+    var loopCounter:Int := 0
+    while(loopCounter <= 100)
+        invariant accumulator <= limit
+    {
+        if (accumulator * 100 <= limit) {
+            accumulator := accumulator * 100
+        }
+        loopCounter := loopCounter + 1
+    }
+}
