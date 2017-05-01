@@ -85,7 +85,7 @@ object ViperToSmtlibUtils {
         False()
 
       case LocalVar(name) =>
-        QualifiedIdentifier(SimpleIdentifier(SSymbol(name)))
+        QualifiedIdentifier(SimpleIdentifier(SSymbol(prefixVarName(name))))
       case IntLit(i) =>
         NumeralLit(i)
 
@@ -108,11 +108,15 @@ object ViperToSmtlibUtils {
   }
 
   def prefixFuncName(name: String): String = {
-    "my_" + name
+    "myF_" + name
   }
 
   def sortedVar(localVarDecl: LocalVarDecl): SortedVar = {
-    SortedVar(SSymbol(localVarDecl.name), toSort(localVarDecl.typ))
+    SortedVar(SSymbol(prefixVarName(localVarDecl.name)), toSort(localVarDecl.typ))
+  }
+
+  def prefixVarName(name: String): String = {
+    "myV_" + name
   }
 
   private def addTriggers(term: Term, triggers: Seq[Trigger], autoTriggers: Seq[Trigger]): Term = {

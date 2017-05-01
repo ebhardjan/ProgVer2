@@ -31,7 +31,7 @@ object DeclarationCollector {
   }
 
   private def collectMethodLocalDeclarations(locals: Seq[LocalVarDecl]): Seq[Command] = {
-    locals.map(l => DeclareConst(SSymbol(l.name), ViperToSmtlibUtils.toSort(l.typ)))
+    locals.map(l => DeclareConst(SSymbol(ViperToSmtlibUtils.prefixVarName(l.name)), ViperToSmtlibUtils.toSort(l.typ)))
   }
 
   def collectAxioms(domains: Seq[Domain]): Seq[Term] = {
