@@ -57,5 +57,12 @@ it verify. We managed for the assertion in the inner loop to verify,
 however the loop invariants and post-condition only verify for the additional
 constraint that the size of the matrices is 1 (making it rather
 uninteresting...).
-* ``SelectionSort.vpr``: Implementation of an Array type and selection sort on it.
-* ``SimpleSequence.vpr``: //TODO
+* ``SelectionSort*-amfc-*.vpr``: Implementation of an Array type and selection sort on it.
+* ``Sequence*-amfc-*.vpr``: Implementation of a Sequence, similar to lectureSequences, but with lookup and store
+defined.
+* ``Set*-amfc-*.vpr``: Implementation of an integer set data structure.
+* ``SumOverflow*-amfc-*.vpr``: Simple loop example where an accumulator is initialized with 1 and multiplied by 100
+every time the loop executes, unless the result of the multiplication would be larger than a limit.
+* ``lecturePairs*-amfc-*.vpr``: Lecture pairs example.
+* ``lectureSequences*-amfc-*.vpr``: Lecture sequences example.
+* ``lecturePeano*-amfc-*.vpr``: Lecture peano arithmetic example.
