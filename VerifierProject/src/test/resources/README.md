@@ -57,5 +57,5 @@ it verify. We managed for the assertion in the inner loop to verify,
 however the loop invariants and post-condition only verify for the additional
 constraint that the size of the matrices is 1 (making it rather
 uninteresting...).
-* ``SelectionSort.vpr``: //TODO
+* ``SelectionSort.vpr``: Implementation of an Array type and selection sort on it.
 * ``SimpleSequence.vpr``: //TODO
