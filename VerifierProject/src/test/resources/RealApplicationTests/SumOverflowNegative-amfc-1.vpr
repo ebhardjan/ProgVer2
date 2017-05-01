@@ -5,7 +5,7 @@ method doSomeCalculationButDontOverflow(limit: Int) returns (accumulator:Int)
     accumulator := 1
     var loopCounter:Int := 0
     while(loopCounter <= 100)
-        invariant accumulator < limit
+        invariant accumulator < limit // this invariant should fail!
     {
         if (accumulator * 100 <= limit) {
             accumulator := accumulator * 100

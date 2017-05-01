@@ -45,7 +45,7 @@ method testDataStructure() {
     assert lookup(s, length(s)) == 6
 
     assert lookup(s, 1) == 1
-    assert lookup(s, 2) == 5
+    assert lookup(s, 2) == 5 // this assertion should fail
     assert lookup(s, 3) == 5
     assert lookup(s, 4) == 6
 }

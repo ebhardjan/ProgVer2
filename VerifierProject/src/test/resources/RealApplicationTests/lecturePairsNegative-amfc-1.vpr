@@ -17,5 +17,5 @@ domain IntPair {
 method test(){
     var p1: IntPair := pair(1,2)
     var p2: IntPair := pair(2,1)
-    assert p1 == p2
+    assert p1 == p2 // this assertion should fail!
 }

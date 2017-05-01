@@ -26,7 +26,7 @@ method hasElemTest() {
     var s: IntSet := init()
     assert !hasElem(s, 1)
     s := add(s, 1)
-    assert hasElem(s, 2)
+    assert hasElem(s, 2) // this assertion should fail!
 }
 
 method orderDoesntMatter() {
@@ -34,5 +34,5 @@ method orderDoesntMatter() {
     var s2: IntSet := init()
     s1 := add(add(s1, 1), 3)
     s2 := add(add(s2, 2), 1)
-    assert s1 == s2
+    assert s1 == s2 // this assertion should fail!
 }
