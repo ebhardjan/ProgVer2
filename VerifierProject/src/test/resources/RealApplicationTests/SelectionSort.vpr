@@ -9,6 +9,9 @@ domain Array {
     axiom initializedLengthHolds {
         forall a:Array, i:Int :: {length(a)} a == init(i) ==> length(a) == i
     }
+    axiom lengthNonNegative {
+        forall a: Array :: {length(a)} length(a) >= 0
+    }
     axiom zeroInitialized {
         forall a:Array, l:Int :: a == init(l) ==> (forall i:Int :: inRange(a, i) ==> lookup(a, i) == 0)
     }
@@ -119,6 +122,8 @@ method selectionSort()
     var i:Int := 1
     var l:Int := length(a)
     while (i <= l)
+        // i is in range or one above
+        invariant 0 < i && i <= length(a) + 1
         // everything before the ith element is sorted
         invariant forall m:Int, n:Int :: inRangeUpTo(a, m, i-1) && inRangeUpTo(a, n, i-1) && m < n
             ==> lookup(a, m) <= lookup(a, n)
@@ -140,6 +145,10 @@ method selectionSort()
             invariant forall x:Int :: i <= x && x < j ==> lookup(a, minPos) <= lookup(a, x)
             // length of array is preserved
             invariant length(a) == l
+            // j and minPos are always larger than i
+            invariant i <= j && i <= minPos
+            // i and minPos are always in range of array
+            invariant inRange(a, i) && inRange(a, minPos)
         {
             var v:Int := lookup(a, j)
             if (v < lookup(a, minPos)) {
@@ -147,7 +156,7 @@ method selectionSort()
             }
             j := j + 1
         }
-        assert forall m:Int, n:Int :: inRangeUpTo(a, m, i-i) && inRangeUpTo(a, n, i-1) && m < n
+        assert forall m:Int, n:Int :: inRangeUpTo(a, m, i-1) && inRangeUpTo(a, n, i-1) && m < n
              ==> lookup(a, m) <= lookup(a, n)
         var min:Int := lookup(a, minPos)
         var tmp:Int := lookup(a, i)
@@ -157,4 +166,56 @@ method selectionSort()
         i := i + 1
     }
     assert isSorted(a)
+}
+
+method selectionSortWithArg(a : Array) returns (r: Array)
+    ensures length(a) == length(r)
+    ensures isSorted(r)
+{
+    r := a
+    var i:Int := 1
+    var l:Int := length(a)
+    while (i <= l)
+        // i is in range or one above
+        invariant 0 < i && i <= length(r) + 1
+        // everything before the ith element is sorted
+        invariant forall m:Int, n:Int :: inRangeUpTo(r, m, i-1) && inRangeUpTo(r, n, i-1) && m < n
+            ==> lookup(r, m) <= lookup(r, n)
+        // all elements after the ith element (including the ith) are larger than everything before the ith element
+        invariant forall m:Int, n:Int :: inRangeUpTo(r, m, i-1) && i <= n && n <= l ==> lookup(r, m) <= lookup(r, n)
+        // length of array is preserved
+        invariant length(a) == l && length(r) == l
+    {
+        var j:Int := i
+        //var min:Int := lookup(a, i)
+        var minPos:Int := i
+        while (j <= l)
+            // everything before the ith element is sorted
+            invariant forall m:Int, n:Int :: inRangeUpTo(r, m, i-1) && inRangeUpTo(r, n, i-1) && m < n
+                ==> lookup(r, m) <= lookup(r, n)
+            // all elements after the ith element (including the ith) are larger than everything before the ith element
+            invariant forall m:Int, n:Int :: inRangeUpTo(r, m, i-1) && i <= n && n <= l ==> lookup(r, m) <= lookup(r, n)
+            // min is smallest element in what we already saw after the ith
+            invariant forall x:Int :: i <= x && x < j ==> lookup(r, minPos) <= lookup(r, x)
+            // length of array is preserved
+            invariant length(r) == l
+            // j and minPos are always larger than i
+            invariant i <= j && i <= minPos
+            // i and minPos are always in range of array
+            invariant inRange(a, i) && inRange(a, minPos)
+        {
+            var v:Int := lookup(r, j)
+            if (v < lookup(r, minPos)) {
+                minPos := j
+            }
+            j := j + 1
+        }
+        assert forall m:Int, n:Int :: inRangeUpTo(r, m, i-1) && inRangeUpTo(r, n, i-1) && m < n
+             ==> lookup(r, m) <= lookup(r, n)
+        var min:Int := lookup(r, minPos)
+        var tmp:Int := lookup(r, i)
+        r := store(r, minPos, tmp)
+        r := store(r, i, min)
+        i := i + 1
+    }
 }
