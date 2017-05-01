@@ -65,11 +65,10 @@ method test(x:Nat,y:Nat,z:Nat) {
     assert forall n : Nat :: (sign(n) == 0 || sign(n) == 1)
     assert sign(y)!=0 ==> sign(plus(x,y))!=0
     assert plus(succ(zero()),succ(zero())) == succ(succ(zero()))
-    //  This assertion causes matching loops (without adding manual triggers, as below):
+    // This assertion causes matching loops (without adding manual triggers, as below):
     // assert forall m:Nat, n:Nat :: plus(zero(),plus(m,n)) == plus(plus(zero(),m),n)
     assert forall m:Nat, n:Nat :: {plus(zero(),plus(m,n))} plus(zero(),plus(m,n)) == plus(plus(zero(),m),n)
-//  This assertion causes matching loops (without adding manual triggers):
-//    assert forall p:Nat, m:Nat, n:Nat :: plus(p,plus(m,n)) == plus(plus(p,m),n) ==> plus(succ(p),plus(m,n)) == plus(plus(succ(p),m),n)
+    // This assertion causes matching loops (without adding manual triggers):
+    // assert forall p:Nat, m:Nat, n:Nat :: plus(p,plus(m,n)) == plus(plus(p,m),n) ==> plus(succ(p),plus(m,n)) == plus(plus(succ(p),m),n)
     assert forall p:Nat :: plus(p,plus(y,z)) == plus(plus(p,y),z) ==> plus(succ(p),plus(y,z)) == plus(plus(succ(p),y),z)
-    assert plus(x,plus(y,z)) == plus(plus(x,y),z) // fails: we don't get induction for free
 }

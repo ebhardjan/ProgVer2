@@ -1,0 +1,51 @@
+// sequence data-structure, similar to what is defined in lectureSecquence
+// but with lookup and append defined
+domain Sequence {
+    function lookup(s:Sequence, i:Int) : Int
+    function length(s:Sequence) : Int
+    function append(s:Sequence, i:Int) : Sequence
+    function empty() : Sequence
+
+    axiom length_empty {
+        length(empty()) == 0
+    }
+    axiom length_append {
+        forall s:Sequence, i:Int :: {length(append(s,i))}
+        {length(s),append(s,i)}{length(s),append(s,i)}
+        length(append(s,i)) == length(s) + 1
+    }
+    axiom length_pos {
+        forall s:Sequence :: length(s) >= 0
+    }
+    axiom lookupAtEnd {
+        forall s:Sequence, s2:Sequence, e:Int ::
+            {lookup(s, e)}
+            {lookup(s2, e)}
+        s == append(s2, e) ==> lookup(s, length(s)) == e
+    }
+    axiom lookupRecursive {
+        forall s:Sequence, s2:Sequence, e:Int, i:Int ::
+            {lookup(s, i)}
+        s == append(s2, e) && i < length(s) && i > 0 ==> lookup(s, i) == lookup(s2, i)
+    }
+} 
+
+method testDataStructure() {
+    var s2: Sequence := empty()
+    assert lookup(append(s2, 1), length(append(s2, 1))) == 1
+
+    var s: Sequence := empty()
+    s := append(s, 1)
+    assert lookup(s, length(s)) == 1
+    s := append(s, 3)
+    assert lookup(s, length(s)) == 3
+    s := append(s, 5)
+    assert lookup(s, length(s)) == 5
+    s := append(s, 6)
+    assert lookup(s, length(s)) == 6
+
+    assert lookup(s, 1) == 1
+    assert lookup(s, 2) == 5 // this assertion should fail
+    assert lookup(s, 3) == 5
+    assert lookup(s, 4) == 6
+}

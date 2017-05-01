@@ -1,3 +1,5 @@
+// sequence data-structure, similar to what is defined in lectureSecquence
+// but with lookup and append defined
 domain Sequence {
     function lookup(s:Sequence, i:Int) : Int
     function length(s:Sequence) : Int
@@ -15,34 +17,16 @@ domain Sequence {
     axiom length_pos {
         forall s:Sequence :: length(s) >= 0
     }
-    axiom appendAndLookup {
-        forall s:Sequence, i:Int ::
-            {lookup(append(s, i),length(append(s, i)))}
-        lookup(append(s, i), length(append(s,i))) == i
+    axiom lookupAtEnd {
+        forall s:Sequence, s2:Sequence, e:Int ::
+            {lookup(s, e)}
+            {lookup(s2, e)}
+        s == append(s2, e) ==> lookup(s, length(s)) == e
     }
-
     axiom lookupRecursive {
-        forall s1:Sequence, s2:Sequence, i:Int, x:Int, y:Int ::
-            {lookup(s1, i)}
-            {lookup(append(s2, x), i)}
-        s1 == append(s2, x) && i == length(s1) - 1 ==> lookup(s1, i) == lookup(s2, length(s2))
-    }
-    /*
-    axiom lookupRecursivUnrolled1 {
-        forall s1:Sequence, s2:Sequence, i:Int, x:Int, y:Int ::
-            {lookup(s1, i)}
-        s1 == append(append(s2, x), y) && i == length(s1) - 2 ==> lookup(s1, i) == lookup(s2, length(s2))
-    }
-    */
-
-    function isSorted(s:Sequence):Bool
-    axiom isSortedBase {
-        forall s: Sequence :: length(s) == 0 || length(s) == 1 ==> isSorted(s) == true
-    }
-    axiom isSortedRecusive {
-        forall s: Sequence, i:Int, j:Int ::
-            {isSorted(s)}
-        i < j && i <= length(s) && j <= length(s) ==> isSorted(s) == lookup(s,i) <= lookup(s,j)
+        forall s:Sequence, s2:Sequence, e:Int, i:Int ::
+            {lookup(s, i)}
+        s == append(s2, e) && i < length(s) && i > 0 ==> lookup(s, i) == lookup(s2, i)
     }
 } 
 
