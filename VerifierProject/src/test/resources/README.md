@@ -51,8 +51,8 @@ Contains test-cases that are actually some implementation of an algorithm or a s
 * ``BinarySearch.vpr``: Binary search on an ordered sequence. Borrows elements
 from the implementation on the Viper examples webpage.
 * ``BST.vpr``: An implementation of a binary search tree.
-* ``MatrixAddition.vpr``: The one we got with the code skeleton, unchanged.
-* ``MatrixAdditionImproved.vpr``: An attempt at fixing the code to make
+* ``MatrixAdditionNegative-amfc-2.vpr``: The MatrixAddition we got with the code skeleton, unchanged.
+* ``MatrixAdditionImprovedPositive-amfc-0.vpr``: An attempt at fixing the code to make
 it verify. We managed for the assertion in the inner loop to verify,
 however the loop invariants and post-condition only verify for the additional
 constraint that the size of the matrices is 1 (making it rather
