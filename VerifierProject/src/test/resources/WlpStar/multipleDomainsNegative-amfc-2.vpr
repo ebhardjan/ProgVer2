@@ -1,0 +1,15 @@
+// tests whether we handle multiple domains in the same file correctly
+// expected assertion might fail count: 2
+domain X {
+    function a(): Bool
+}
+domain Y {
+    function b(): Bool
+}
+
+method testX() {
+    assert a()
+}
+method testY() {
+    assert b()
+}
