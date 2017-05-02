@@ -43,14 +43,13 @@ also run through our weakest liberal precondition code.
 The tests in this folder ensure a high line coverage in the ``MethodTransformer``.
 
 RealApplicationTests
-----------------
+--------------------
 
 Contains test-cases that are actually some implementation of an algorithm or a simple data structure.
 
-//TODO list all the test cases here and bla bla...
-* ``BinarySearch.vpr``: Binary search on an ordered sequence. Borrows elements
+* ``BinarySearch*-amfc-*.vpr``: Binary search on an ordered sequence. Borrows elements
 from the implementation on the Viper examples webpage.
-* ``BST.vpr``: An implementation of a binary search tree.
+* ``BST-amfc-2.vpr``: An implementation of a binary search tree. (Negative example only)
 * ``MatrixAdditionNegative-amfc-2.vpr``: The MatrixAddition we got with the code skeleton, unchanged.
 * ``MatrixAdditionImprovedPositive-amfc-0.vpr``: An attempt at fixing the code to make
 it verify. We managed for the assertion in the inner loop to verify,
@@ -66,3 +65,11 @@ every time the loop executes, unless the result of the multiplication would be l
 * ``lecturePairs*-amfc-*.vpr``: Lecture pairs example.
 * ``lectureSequences*-amfc-*.vpr``: Lecture sequences example.
 * ``lecturePeano*-amfc-*.vpr``: Lecture peano arithmetic example.
+
+Other Files
+-----------
+
+We've used the other files that are in the resources root directory to play
+around with our verifier during the development phase.
+They can basically be ignored as the interesting things are covered by the
+automated tests in some other test in the EndToEnd or WlpStar directory.
