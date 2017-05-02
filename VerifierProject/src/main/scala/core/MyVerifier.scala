@@ -76,6 +76,11 @@ class MyVerifier(timeout: Int = -1) extends BareboneVerifier {
       return ViperFailure(Seq(Internal(program,InternalReason(program, "Input program uses unsupported Viper features!"))))
     }
 
+    if (config.printTransformed.getOrElse(false)) {
+      println("Transformed program:")
+      program.domains.foreach(d => println(d))
+    }
+
     val transformer = new MethodTransformer()
     var failures: Seq[VerificationError] = Seq()
     program.methods.foreach(m => {
@@ -84,7 +89,7 @@ class MyVerifier(timeout: Int = -1) extends BareboneVerifier {
       val method = transformer.transform(methodWithInfo)
 
       if (config.printTransformed.getOrElse(false)) {
-        println("Transformed method:\n" + method + "\n")
+        println(method)
       }
 
       val declarations = DeclarationCollector.collectDeclarations(program, method.locals ++ method.formalArgs ++
