@@ -181,7 +181,7 @@ class MyVerifier(timeout: Int = -1) extends BareboneVerifier {
       """
         |; done setting options
         |
-                 """.stripMargin
+        |""".stripMargin
 
     // write program to a temporary file (name will be an auto-generated variant of the first parameter string)
     val tmp = File.createTempFile("mytempfile", ".smt2")
