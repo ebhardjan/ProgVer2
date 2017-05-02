@@ -10,6 +10,8 @@ import viper.silver.ast._
 
 /**
   * Created by jan on 08.04.17.
+  *
+  * Some util function that help in transforming viper ast nodes to smtlib ast nodes
   */
 object ViperToSmtlibUtils {
 
