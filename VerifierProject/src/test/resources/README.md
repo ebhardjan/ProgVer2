@@ -19,7 +19,7 @@ Timeout
 -------
 
 For our automated tests we use a z3 timeout of 20 seconds. For the assembled jar version that can be used in Visual
-Studio Code we use no timeout for z3.
+Studio Code or an invocation via the command line (``sbt "run ..."``) we use no timeout for z3.
 
 WlpStar
 -------
@@ -42,7 +42,7 @@ Contains very simple test-cases that are mainly used to test the method transfor
 also run through our weakest liberal precondition code.
 The tests in this folder ensure a high line coverage in the ``MethodTransformer``.
 
-ApplicationTests
+RealApplicationTests
 ----------------
 
 Contains test-cases that are actually some implementation of an algorithm or a simple data structure.

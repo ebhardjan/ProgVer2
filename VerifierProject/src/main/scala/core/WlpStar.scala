@@ -2,13 +2,14 @@ package core
 
 import smtlib.parser.Terms._
 import smtlib.theories.Core
-import smtlib.theories.Core._
 import util.ViperToSmtlibUtils
 import viper.silver.ast._
 import viper.silver.verifier.AbstractVerificationError
 
 /**
   * Created by jan on 07.04.17.
+  *
+  * Weakest Liberal Precondition calculation.
   */
 object WlpStar {
 

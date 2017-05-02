@@ -7,9 +7,17 @@ import viper.silver.verifier.reasons.AssertionFalse
 
 /**
   * Created by jan on 21.04.17.
+  *
+  * Used to create custom error objects for the ast nodes that could produce errors.
   */
 object ErrorCreator {
 
+  /**
+    * adds error information to all the ast nodes in the methods body that could produce an error
+    *
+    * @param method the method where error information should be added
+    * @return the method where some ast nodes have now further error info in their info field
+    */
   def addInfoToNodes(method: Method): Method = {
     val bodyWithInfo = addInfoToNodes(method.body)
     Method(method.name,
